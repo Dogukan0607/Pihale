@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Emlak Haritası (Supabase)</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+  <style>
+    body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    #map { height: calc(100vh - 120px); width: 100%; }
+    #filters {
+      background: #ecf0f1;
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+    select, button {
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    header {
+      background-color: #2c3e50;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { font-size: 24px; margin: 0; flex-grow: 1; }
+    .profile-menu { position: relative; }
+    .profile-icon {
+      background-color: #000; border: none; color: white; font-size: 16px;
+      border-radius: 50%; width: 40px; height: 40px; cursor: pointer;
+    }
+    .dropdown-menu {
+      position: absolute; top: 50px; right: 0; background: white;
+      border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      display: none; flex-direction: column; min-width: 160px; z-index: 1000;
+    }
+    .dropdown-menu button {
+      padding: 12px 16px; background: none; border: none; text-align: left;
+      font-size: 14px; cursor: pointer; border-bottom: 1px solid #eee;
+    }
+    .dropdown-menu button:hover { background-color: #f0f0f0; }
+    #menuToggle {
+      background:none; border:none; cursor:pointer; display:flex;
+      flex-direction: column; justify-content:center; gap:6px; padding:10px; margin-right: 15px;
+    }
+    #menuToggle span { display:block; height:3px; background:#000; border-radius:2px; width:25px; }
+    #sideMenu {
+      position: fixed; top: 0; left: -250px; width: 250px; height: 100%;
+      background: #2c3e50; padding: 20px; box-sizing: border-box;
+      transition: left 0.3s ease; color: white; z-index: 2000;
+    }
+    #sideMenu ul { list-style:none; padding:0; }
+    #sideMenu ul li { margin-bottom: 15px; transition: transform 0.2s ease; }
+    #sideMenu ul li:hover { transform: scale(1.1); }
+    #sideMenu ul li a { color:white; text-decoration:none; font-size: 16px; display:block; }
+
+    /* Marker Nokta Tasarımı */
+    .dot-marker {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 0 4px rgba(0,0,0,0.4);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .dot-marker:hover {
+      transform: scale(1.4);
+      box-shadow: 0 0 8px rgba(0,0,0,0.6);
+    }
+
+    /* Popup Kart Tasarımı */
+    .leaflet-popup-content { margin:0; padding:0; }
+    .popup-card {
+      display: flex;
+      flex-direction: row;
+      width: 280px;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      font-family: Arial, sans-serif;
+      cursor: pointer;
+    }
+    .popup-card img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+    }
+    .popup-info {
+      flex: 1;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .popup-info strong {
+      font-size: 14px;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .popup-info .details {
+      font-size: 12px;
+      color: #555;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .popup-info .price {
+      margin-top: 5px;
+      font-size: 14px;
+      color: #2c3e50;
+      font-weight: bold;
+    }
+
+    /* Responsive: Mobilde dikey tasarım */
+    @media (max-width: 480px) {
+      .popup-card {
+        flex-direction: column;
+        width: 220px;
+      }
+      .popup-card img {
+        width: 100%;
+        height: 140px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <button id="menuToggle" aria-label="Menüyü Aç/Kapat">
+    <span></span>
+    <span></span>
+  </button>
+  
+  <h1>PİHALE Harita Uygulaması</h1>
+  
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <div class="profile-menu">
+      <button class="profile-icon" id="profileBtn">👤</button>
+      <div class="dropdown-menu" id="profileMenu">
+        <button onclick="window.location.href='profil.html'">Profilim</button>
+        <button onclick="window.location.href='analiz.html'">Analiz</button>
+        <button onclick="window.location.href='ilanlarim.html'">İlanlarım</button>
+        <button onclick="window.location.href='ayarlar.html'">Ayarlar</button>
+        <button onclick="logout()">Çıkış Yap</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+  <nav id="sideMenu">
+  <h2>Menü</h2>
+  <ul>
+    <li><a href="hizlisatis.html">Hızlı İhale</a></li>
+    <li><a href="sutun.html?tur=konut">Konut</a></li>
+    <li><a href="sutun.html?tur=isyeri">İş Yeri</a></li>
+    <li><a href="sutun.html?tur=arsa">Arsa</a></li>
+    <li><a href="sutun.html?tur=konutProjesi">Konut Projeleri</a></li>
+    <li><a href="sutun.html?tur=bina">Bina</a></li>
+    <li><a href="sutun.html?tur=devremulk">Devre Mülk</a></li>
+    <li><a href="sutun.html?tur=turistik">Turistlik Tesis</a></li>
+    <li><a href="hakkimizda.html">Hakkımızda</a></li>
+  </ul>
+</nav>
+
+
+<div id="filters">
+  <select id="status-filter">
+    <option value="">Durum</option>
+    <option value="satılık">Satılık</option>
+    <option value="kiralık">Kiralık</option>
+  </select>
+  <select id="il-filter">
+    <option value="">İl</option>
+    <option value="Antalya">Antalya</option>
+    <option value="Konya">Konya</option>
+    <option value="Gaziantep">Gaziantep</option>
+  </select>
+  <select id="ilce-filter"><option value="">İlçe</option></select>
+  <button onclick="applyFilters()">Filtrele</button>
+</div>
+
+<div id="map"></div>
+
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const { createClient } = supabase;
+
+const supabaseUrl = "https://ofmupldxmqtgddzvbakp.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA";
+
+const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+// Harita başlat
+const map = L.map('map', {
+  zoomControl: false,
+  minZoom: 6,
+  maxZoom: 18,
+  maxBounds: [
+    [35.8086, 25.0],
+    [42.1, 45.0]
+  ],
+  maxBoundsViscosity: 1.0
+}).setView([39.0, 35.0], 6);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap katkıcıları'
+}).addTo(map);
+
+const markersGroup = L.markerClusterGroup();
+map.addLayer(markersGroup);
+
+// Marker ekleme (Yeni sütun yapısına uygun)
+function addMarker(ilan) {
+  if (!ilan.konum) return;
+
+  const renk = ilan.durum === "satılık" ? "#e67e22" : "#27ae60";
+
+  const customIcon = L.divIcon({
+    className: "custom-dot",
+    html: `<div class="dot-marker" style="background:${renk}"></div>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8]
+  });
+
+  // Detaylar JSON parse
+  let detay = ilan.detaylar || {};
+  if (typeof detay === "string") {
+    try { detay = JSON.parse(detay); } catch (e) { detay = {}; }
+  }
+
+  // Resimler JSON parse
+  let resimler = ilan.resimler || [];
+  if (typeof resimler === "string") {
+    try { resimler = JSON.parse(resimler); } catch (e) { resimler = []; }
+  }
+  const ilkResim = resimler.length > 0 ? resimler[0] : 'https://via.placeholder.com/100';
+
+  // Değerleri al
+  const odaSayisi = detay.oda_sayisi || detay.odaSayisi || "-";
+  const kat = detay.kat || "-";
+  const m2Brut = detay.m2_brut || detay.m2Brut || "-";
+
+  const marker = L.marker([ilan.konum.lat, ilan.konum.lng], { icon: customIcon });
+
+  marker.bindPopup(`
+    <div class="popup-card" onclick="window.location.href='ilan-detay.html?id=${ilan.id}'">
+      <img src="${ilkResim}" alt="İlan Resmi" />
+      <div class="popup-info">
+        <strong>${ilan.title || 'Başlık Yok'}</strong>
+        <div class="details">📍 ${ilan.ilce || '-'}, ${ilan.il || '-'}</div>
+        <div class="details">📏 ${m2Brut} m² • 🛏 ${odaSayisi} • 🏢 ${kat}</div>
+        <div class="price">${ilan.price ? ilan.price + ' TL' : 'Fiyat Yok'}</div>
+      </div>
+    </div>
+  `);
+
+  markersGroup.addLayer(marker);
+}
+
+// İlanları yükle
+async function loadListings() {
+  const { data, error } = await supabaseClient
+    .from('ilanlar')
+    .select('*')
+    .eq('onay_durumu', 'onaylandi');
+
+  if (error) {
+    console.error("İlanlar yüklenemedi:", error.message);
+    return;
+  }
+
+  window.allListings = data || [];
+  markersGroup.clearLayers();
+  window.allListings.forEach(addMarker);
+}
+
+loadListings();
+
+// Filtreleme
+function applyFilters() {
+  const durum = document.getElementById('status-filter').value;
+  const il = document.getElementById('il-filter').value;
+  const ilce = document.getElementById('ilce-filter').value;
+
+  const filtered = window.allListings.filter(item =>
+    (!durum || item.durum === durum) &&
+    (!il || item.il === il) &&
+    (!ilce || item.ilce === ilce)
+  );
+
+  markersGroup.clearLayers();
+  filtered.forEach(addMarker);
+}
+
+// Menü
+document.addEventListener("DOMContentLoaded", () => {
+  const menuToggle = document.getElementById('menuToggle');
+  const sideMenu = document.getElementById('sideMenu');
+  const profileBtn = document.getElementById('profileBtn');
+  const profileMenu = document.getElementById('profileMenu');
+
+  menuToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    sideMenu.style.left = (sideMenu.style.left === '0px') ? '-250px' : '0px';
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!sideMenu.contains(e.target) && sideMenu.style.left === '0px') {
+      sideMenu.style.left = '-250px';
+    }
+  });
+
+  profileBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    profileMenu.style.display = profileMenu.style.display === 'flex' ? 'none' : 'flex';
+  });
+
+  document.addEventListener('click', () => {
+    profileMenu.style.display = 'none';
+  });
+
+  window.logout = function () {
+    localStorage.clear();
+    alert("Çıkış yapılıyor...");
+    window.location.href = "giris.html";
+  };
+});
+</script>
+
+</body>
+</html>

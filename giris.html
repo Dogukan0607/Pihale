@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Giriş Yap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #2c3e50, #3498db);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: white;
+    }
+    .login-container {
+      background-color: rgba(0, 0, 0, 0.6);
+      padding: 40px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      width: 90%;
+      max-width: 400px;
+    }
+    .login-container h1 {
+      margin-bottom: 20px;
+      font-size: 28px;
+    }
+    .login-container input,
+    .login-container select,
+    .login-container button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+    }
+    input {
+      background-color: white;
+      color: black;
+    }
+    button {
+      background-color: #2c3e50;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #34495e;
+    }
+    .error {
+      color: #f88;
+      font-size: 14px;
+      min-height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1>Giriş Yap</h1>
+
+    <select id="userType">
+      <option value="">Kullanıcı Türü Seçin</option>
+      <option value="emlakci">Emlakçı</option>
+      <option value="insaat">İnşaat Şirketi</option>
+    </select>
+
+    <input type="email" id="email" placeholder="E-posta" />
+    <input type="password" id="password" placeholder="Şifre" />
+    <div id="error" class="error"></div>
+
+    <button onclick="girisYap()">Giriş Yap</button>
+  </div>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Supabase Config
+    const SUPABASE_URL = "https://ofmupldxmqtgddzvbakp.supabase.co";  // kendi Supabase URL'in
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA";               // kendi anon key'in
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const errorEl = document.getElementById("error");
+
+    async function girisYap() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const userType = document.getElementById("userType").value;
+
+      // Admin değilse kullanıcı türü zorunlu
+      if (email !== "admin@admin.com" && !userType) {
+        errorEl.textContent = "Lütfen kullanıcı türü seçiniz.";
+        return;
+      }
+
+      // Supabase Auth ile giriş
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (error) {
+        errorEl.textContent = "E-posta veya şifre hatalı.";
+        return;
+      }
+
+      // Kullanıcı bilgilerini localStorage'a kaydet
+      localStorage.setItem("email", email);
+      if (email !== "admin@admin.com") {
+        localStorage.setItem("userType", userType);
+      }
+
+      // Yönlendirme
+      if (email === "admin@admin.com") {
+        window.location.href = "admin.html";
+      } else {
+        window.location.href = "index.html";
+      }
+    }
+
+    // Enter tuşu ile giriş
+    document.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        girisYap();
+      }
+    });
+
+    // Oturum kontrolü: kullanıcı giriş yaptıysa login sayfasına tekrar gelmesin
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        window.location.href = "index.html";
+      }
+    })();
+  </script>
+</body>
+</html>

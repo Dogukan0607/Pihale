@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>İlan Detay</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #f8f9fa; }
+    .container { display: flex; flex-wrap: wrap; max-width: 1200px; margin: 20px auto; gap: 20px; }
+    .left { flex: 1 1 60%; background: #fff; border-radius: 8px; overflow: hidden; }
+    .right { flex: 1 1 35%; perspective: 1000px; }
+
+    /* Flip Card */
+    .flip-card {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.8s ease-in-out;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .flip-card.flipped {
+      transform: rotateY(180deg) scale(1.03);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    .flip-side {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .flip-back {
+      transform: rotateY(180deg);
+    }
+
+    h1, h2 { font-size: 22px; margin: 10px 0; }
+    .price { font-size: 24px; color: #2c3e50; font-weight: bold; margin: 10px 0; }
+    .location { font-size: 16px; color: #555; margin-bottom: 15px; }
+    .detail-table { width: 100%; border-collapse: collapse; font-size: 16px; }
+    .detail-table td { padding: 6px 4px; border-bottom: 1px solid #ddd; }
+
+    /* Açıklama en alt */
+    .description-box {
+      max-width: 1200px;
+      margin: 20px auto;
+      background: #f1f3f6;
+      border-radius: 8px;
+      padding: 15px;
+      font-size: 16px;
+      color: #333;
+    }
+
+    /* Slider */
+    .slider-wrapper { position: relative; width: 100%; height: 400px; overflow: hidden; }
+    .slider { display: flex; width: 100%; height: 100%; transition: transform 0.5s ease-in-out; }
+    .slider img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;       /* Orantılı kırpmadan göster */
+      background-color: #000; /* Boş alan siyah doldurulsun */
+      flex-shrink: 0;
+      aspect-ratio: 16/9;      /* Mobilde oran koruma */
+    }
+    .slider-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      border: none;
+      font-size: 20px;
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 50%;
+      z-index: 2;
+    }
+    .prev { left: 10px; } .next { right: 10px; }
+    #map { width: 100%; height: 200px; margin-top: 10px; }
+
+    .toggle-btn {
+      display: block;
+      margin: 15px auto 0 auto;
+      padding: 10px 20px;
+      background: #2c3e50;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s;
+    }
+    .toggle-btn:hover { background: #1a252f; }
+
+    /* Mobil uyum */
+    @media (max-width: 900px) {
+      .container { flex-direction: column; }
+      .left, .right { flex: 1 1 100%; }
+      .flip-card { transform: none !important; }
+      .flip-side, .flip-back { position: relative; transform: none; backface-visibility: visible; }
+
+      .slider-wrapper { height: auto; }      /* Mobilde yükseklik içerik oranına göre ayarlanır */
+      .slider img { aspect-ratio: 16/9; }    /* Mobilde orantılı görüntü */
+
+      .tab-buttons { display: flex; justify-content: center; gap: 10px; margin: 10px 0; }
+      .tab-buttons button {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #2c3e50;
+        background: #fff;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .tab-buttons button.active { background: #2c3e50; color: #fff; }
+      .tab-content { display: none; }
+      .tab-content.active { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <div id="detail-container"><p>Yükleniyor...</p></div>
+  <div id="aciklama-kutusu" class="description-box" style="display:none;"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    /* --- KODUN TAMAMI AYNI, GÖRSEL YAPISI KORUNDU --- */
+    /* Sadece CSS ve slider img kısmı güncellendi */
+
+    const supabaseUrl = "https://ofmupldxmqtgddzvbakp.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    function getQueryParam(key) {
+      return new URLSearchParams(window.location.search).get(key);
+    }
+
+    const ilanId = getQueryParam("id");
+    const container = document.getElementById("detail-container");
+    const aciklamaKutusu = document.getElementById("aciklama-kutusu");
+
+    async function loadIlan() {
+      if (!ilanId) {
+        container.innerHTML = `<p>İlan bilgisi eksik.</p><a href="index.html">← Geri Dön</a>`;
+        return;
+      }
+
+      const { data: ilan, error } = await supabaseClient.from("ilanlar").select("*").eq("id", ilanId).single();
+      if (error || !ilan) {
+        container.innerHTML = `<p>İlan bulunamadı.</p><a href="index.html">← Geri Dön</a>`;
+        return;
+      }
+
+      const { data: user } = await supabaseClient.from("kullanicilar").select("*").eq("id", ilan.user_id).single();
+
+      // JSON parse
+      let detay = ilan.detaylar || {};
+      if (typeof detay === "string") {
+        try { detay = JSON.parse(detay); } catch (e) { detay = {}; }
+      }
+
+      const brut = detay.m2_brut || detay.m2Brut || "-";
+      const net = detay.m2_net || detay.m2Net || "-";
+      const odaSayisi = detay.oda_sayisi || detay.odaSayisi || "-";
+      const siteIci = detay.site_ici || detay.siteIci || "-";
+      const isitma = detay.isitma || "-";
+      const balkon = detay.balkon || "-";
+      const kat = detay.kat || "-";
+      const katSayisi = detay.kat_sayisi || detay.katSayisi || "-";
+      const banyoSayisi = detay.banyo_sayisi || detay.banyoSayisi || "-";
+
+      let images = ilan.resimler || [];
+      if (typeof images === "string") {
+        try { images = JSON.parse(images); } catch (e) { images = []; }
+      }
+      if (images.length === 0) {
+        images = ["https://via.placeholder.com/1200x350?text=Resim+Yok"];
+      }
+
+      let calisanlar = user?.calisanlar || {};
+      if (typeof calisanlar === "string") {
+        try { calisanlar = JSON.parse(calisanlar); } catch (e) { calisanlar = {}; }
+      }
+
+      const sliderHTML = `
+        <div class="slider-wrapper">
+          <div class="slider" id="slider">
+            ${images.map(img => `<img src="${img}" alt="İlan Resmi">`).join(' ')}
+          </div>
+          <button class="slider-btn prev">&#10094;</button>
+          <button class="slider-btn next">&#10095;</button>
+        </div>
+        <div id="map"></div>
+      `;
+
+      container.innerHTML = `
+        <div class="container">
+          <div class="left">
+            ${sliderHTML}
+          </div>
+          <div class="right">
+            <div class="flip-card" id="flipCard">
+              <!-- Ön Yüz -->
+              <div class="flip-side flip-front tab-content active" id="ilan-tab">
+                <h1>${ilan.title || "—"}</h1>
+                <div class="price">${ilan.price?.toLocaleString('tr-TR') || "-"} TL</div>
+                <div class="location">${ilan.il || "-"} / ${ilan.ilce || "-"}</div>
+                <table class="detail-table">
+                  <tr><td><strong>Durum</strong></td><td>${ilan.durum || "-"}</td></tr>
+                  <tr><td><strong>İlan Türü</strong></td><td>${ilan.ilan_turu || "-"}</td></tr>
+                  <tr><td><strong>m² (Brüt)</strong></td><td>${brut}</td></tr>
+                  <tr><td><strong>m² (Net)</strong></td><td>${net}</td></tr>
+                  <tr><td><strong>Oda Sayısı</strong></td><td>${odaSayisi}</td></tr>
+                  <tr><td><strong>Bulunduğu Kat</strong></td><td>${kat}</td></tr>
+                  <tr><td><strong>Kat Sayısı</strong></td><td>${katSayisi}</td></tr>
+                  <tr><td><strong>Banyo Sayısı</strong></td><td>${banyoSayisi}</td></tr>
+                  <tr><td><strong>Balkon</strong></td><td>${balkon}</td></tr>
+                  <tr><td><strong>Site İçinde</strong></td><td>${siteIci}</td></tr>
+                  <tr><td><strong>Isıtma</strong></td><td>${isitma}</td></tr>
+                </table>
+                <button class="toggle-btn" onclick="toggleFlip()">Satıcı Bilgileri</button>
+              </div>
+              <!-- Arka Yüz -->
+              <div class="flip-side flip-back tab-content" id="satici-tab">
+                <h2>Satıcı Bilgileri</h2>
+                <table class="detail-table">
+                  <tr><td><strong>Email</strong></td><td>${user?.email || "-"}</td></tr>
+                  <tr><td><strong>Firma Adı</strong></td><td>${user?.firma_adi || "-"}</td></tr>
+                  <tr><td><strong>Telefon</strong></td><td>${user?.telefon || "-"}</td></tr>
+                  <tr><td><strong>Kullanıcı Türü</strong></td><td>${user?.kullanici_turu || "-"}</td></tr>
+                  <tr><td><strong>Adres</strong></td><td>${user?.adres || "-"}</td></tr>
+                  ${Object.entries(calisanlar).map(([k,v]) => `
+                    <tr><td><strong>${k}</strong></td><td>${v}</td></tr>
+                  `).join('')}
+                </table>
+                <button class="toggle-btn" onclick="toggleFlip()">İlan Bilgileri</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Mobil sekmeler -->
+        <div class="tab-buttons" id="mobile-tabs" style="display:none;">
+          <button class="active" data-target="ilan-tab">İlan Bilgileri</button>
+          <button data-target="satici-tab">Satıcı Bilgileri</button>
+        </div>
+      `;
+
+      aciklamaKutusu.style.display = "block";
+      aciklamaKutusu.innerHTML = `<strong>Açıklama:</strong><br>${ilan.description || "-"}`;
+
+      initSlider(images);
+      initMap(ilan.konum);
+      initMobileTabs();
+    }
+
+    function toggleFlip() {
+      if (window.innerWidth > 900) {
+        document.getElementById('flipCard').classList.toggle('flipped');
+      }
+    }
+
+    function initMobileTabs() {
+      if (window.innerWidth <= 900) {
+        document.getElementById('mobile-tabs').style.display = 'flex';
+        const buttons = document.querySelectorAll('#mobile-tabs button');
+        buttons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            document.getElementById(btn.dataset.target).classList.add('active');
+          });
+        });
+      }
+    }
+
+    function initSlider(images) {
+      const slider = document.getElementById("slider");
+      let currentIndex = 0;
+      let autoSlide = setInterval(nextSlide, 5000);
+
+      function updateSlider() {
+        slider.style.transform = `translateX(-${currentIndex * 100}%)`;
+      }
+
+      function nextSlide() {
+        currentIndex = (currentIndex + 1) % images.length;
+        updateSlider();
+      }
+
+      function prevSlide() {
+        currentIndex = (currentIndex - 1 + images.length) % images.length;
+        updateSlider();
+      }
+
+      function resetAutoSlide() {
+        clearInterval(autoSlide);
+        autoSlide = setInterval(nextSlide, 5000);
+      }
+
+      document.querySelector(".next").addEventListener("click", () => { nextSlide(); resetAutoSlide(); });
+      document.querySelector(".prev").addEventListener("click", () => { prevSlide(); resetAutoSlide(); });
+    }
+
+    function initMap(location) {
+      if (!location) return;
+      const lat = location.lat;
+      const lng = location.lng;
+
+      const map = L.map('map').setView([lat, lng], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap katkıcıları' }).addTo(map);
+      L.marker([lat, lng]).addTo(map);
+    }
+
+    loadIlan();
+  </script>
+</body>
+</html>

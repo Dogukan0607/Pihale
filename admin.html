@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Paneli</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
+    h2 { color: #2c3e50; margin-top: 0; }
+    .nav { display: flex; gap: 10px; padding: 20px; justify-content: center; flex-wrap: wrap; }
+    .nav button { padding: 14px 24px; background-color: #3498db; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; }
+    .nav button:hover { background-color: #2980b9; }
+    .section { display: none; padding: 20px; background: white; border-radius: 10px; margin: 10px auto; max-width: 900px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, select { width: 100%; margin: 10px 0; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+    button[type="submit"] { background-color: #2ecc71; color: white; border: none; font-size: 16px; padding: 10px 20px; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
+    th { background: #2980b9; color: white; }
+    #ilanOnayListesi div { background:white; margin-bottom:10px; padding:10px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1) }
+    #detayMap { width:100%; height:250px; margin-top:10px; border-radius:6px; }
+  </style>
+</head>
+<body>
+
+<div class="nav">
+  <button onclick="showSection('uyeEkle')">Üye Ekle</button>
+  <button onclick="loadMembers()">Üye Listesi</button>
+  <button onclick="loadPendingListings()">İlan Onay</button>
+</div>
+
+<!-- Üye Ekle -->
+<div id="uyeEkle" class="section" style="display:block;">
+  <h2>Yeni Üye Ekle</h2>
+  <form id="uyeForm">
+    <input type="email" id="email" placeholder="E-posta" required>
+    <input type="password" id="password" placeholder="Şifre" required>
+    <input type="text" id="firmaAdi" placeholder="Firma Adı" required>
+    <select id="kullaniciTuru" required>
+      <option value="">Kullanıcı Türü</option>
+      <option value="emlakci">Emlakçı</option>
+      <option value="insaat">İnşaat Şirketi</option>
+    </select>
+    <input type="text" id="telefon" placeholder="Telefon" required>
+    <input type="text" id="adres" placeholder="Adres" required>
+    <label>Şirket Çalışanları:</label>
+    <input type="text" id="mudur" placeholder="Müdür Adı">
+    <input type="text" id="mudurYardimcisi" placeholder="Müdür Yardımcısı Adı">
+    <input type="text" id="personel" placeholder="Personel Adı">
+    <button type="submit">Üye Ekle</button>
+  </form>
+</div>
+
+<!-- Üye Listesi -->
+<div id="uye-listesi" class="section">
+  <h2>Kayıtlı Üyeler</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>E-posta</th>
+        <th>Firma Adı</th>
+        <th>Kullanıcı Türü</th>
+        <th>Telefon</th>
+        <th>Abonelik</th>
+        <th>Kayıt Tarihi</th>
+      </tr>
+    </thead>
+    <tbody id="uyeListesiBody"></tbody>
+  </table>
+</div>
+
+<!-- İlan Onay -->
+<div id="ilanOnay" class="section">
+  <h2>Onay Bekleyen İlanlar</h2>
+  <div id="ilanOnayListesi"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const { createClient } = supabase;
+const supabaseUrl = "https://ofmupldxmqtgddzvbakp.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA";
+const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+}
+
+/* Üye Ekle */
+document.getElementById("uyeForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const firmaAdi = document.getElementById("firmaAdi").value.trim();
+  const kullaniciTuru = document.getElementById("kullaniciTuru").value;
+  const telefon = document.getElementById("telefon").value.trim();
+  const adres = document.getElementById("adres").value.trim();
+  const calisanlar = {
+    mudur: document.getElementById("mudur").value.trim(),
+    mudurYardimcisi: document.getElementById("mudurYardimcisi").value.trim(),
+    personel: document.getElementById("personel").value.trim()
+  };
+
+  // 1. Auth kaydı (trigger otomatik ekler: id + email + created_at)
+  const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({
+    email: email,
+    password: password
+  });
+
+  if (signUpError) {
+    alert("Hata: " + signUpError.message);
+    return;
+  }
+
+  // 2. Ek alanları update et
+  const userId = signUpData.user.id;
+  const { error: updateError } = await supabaseClient
+    .from('kullanicilar')
+    .update({
+      firma_adi: firmaAdi,
+      kullanici_turu: kullaniciTuru,
+      telefon: telefon,
+      adres: adres,
+      calisanlar: calisanlar,
+      subscription_status: 'active'
+    })
+    .eq('id', userId);
+
+  if (updateError) {
+    alert("Güncelleme hatası: " + updateError.message);
+    return;
+  }
+
+  alert("Kullanıcı başarıyla eklendi ve bilgileri güncellendi.");
+  document.getElementById("uyeForm").reset();
+});
+
+/* Üye Listesi */
+async function loadMembers() {
+  showSection('uye-listesi');
+  const tbody = document.getElementById("uyeListesiBody");
+  tbody.innerHTML = "<tr><td colspan='6'>Yükleniyor...</td></tr>";
+
+  const { data, error } = await supabaseClient.from('kullanicilar').select('*');
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan='6'>Hata: ${error.message}</td></tr>`;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='6'>Kayıtlı üye yok</td></tr>";
+    return;
+  }
+
+  tbody.innerHTML = "";
+  data.forEach(user => {
+    const date = user.created_at ? new Date(user.created_at).toLocaleDateString("tr-TR") : "-";
+    const row = `
+      <tr>
+        <td>${user.email}</td>
+        <td>${user.firma_adi || '-'}</td>
+        <td>${user.kullanici_turu || '-'}</td>
+        <td>${user.telefon || '-'}</td>
+        <td>${user.subscription_status || '-'}</td>
+        <td>${date}</td>
+      </tr>`;
+    tbody.innerHTML += row;
+  });
+}
+
+/* Onay Bekleyen İlanlar */
+async function loadPendingListings() {
+  showSection('ilanOnay');
+  const div = document.getElementById("ilanOnayListesi");
+  div.innerHTML = "Yükleniyor...";
+
+  const { data, error } = await supabaseClient
+    .from('ilanlar')
+    .select('*')
+    .eq('onay_durumu', 'onayBekliyor');
+
+  if (error) {
+    div.innerHTML = "Hata: " + error.message;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    div.innerHTML = "Onay bekleyen ilan bulunamadı.";
+    return;
+  }
+
+  div.innerHTML = "";
+  data.forEach(ilan => {
+    // Resimler JSON parse
+    let resimler = ilan.resimler || [];
+    if (typeof resimler === "string") {
+      try { resimler = JSON.parse(resimler); } catch (e) { resimler = []; }
+    }
+    const firstImage = resimler.length > 0 ? resimler[0] : 'https://via.placeholder.com/150';
+
+    // Detaylar JSON parse
+    let detaylar = ilan.detaylar || {};
+    if (typeof detaylar === "string") {
+      try { detaylar = JSON.parse(detaylar); } catch (e) { detaylar = {}; }
+    }
+
+    const oda = detaylar.oda_sayisi || detaylar.odaSayisi || "-";
+    const m2Brut = detaylar.m2_brut || detaylar.m2Brut || "-";
+    const kat = detaylar.kat || "-";
+
+    div.innerHTML += `
+      <div>
+        <img src="${firstImage}" style="width:100%;max-height:150px;object-fit:cover;border-radius:6px;">
+        <h3>${ilan.title || 'Başlık Yok'} <small>(${ilan.ilan_turu || '-'})</small></h3>
+        <p><strong>Fiyat:</strong> ${ilan.price ? ilan.price + " TL" : "-"} </p>
+        <p><strong>Detay:</strong> ${m2Brut} m² • ${oda} • Kat: ${kat}</p>
+        <p><strong>İl/İlçe:</strong> ${ilan.il || '-'} / ${ilan.ilce || '-'}</p>
+        <button onclick="approveListing('${ilan.id}')">Onayla</button>
+        <button onclick="rejectListing('${ilan.id}')">Reddet</button>
+      </div>
+    `;
+  });
+}
+
+/* Onay / Reddet */
+async function approveListing(id) {
+  await supabaseClient.from('ilanlar').update({ onay_durumu: 'onaylandi' }).eq('id', id);
+  loadPendingListings();
+}
+async function rejectListing(id) {
+  await supabaseClient.from('ilanlar').update({ onay_durumu: 'reddedildi' }).eq('id', id);
+  loadPendingListings();
+}
+</script>
+</body>
+</html>

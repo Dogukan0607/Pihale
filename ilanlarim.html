@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>İlanlarım</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+    h1 { text-align: center; color: #2c3e50; margin-bottom: 20px; }
+    .ilan-list {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .ilan-card {
+      background: white; padding: 15px; border-radius: 8px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+    }
+    .ilan-card img {
+      width: 100%; height: 160px; object-fit: cover;
+      border-radius: 6px; margin-bottom: 10px;
+    }
+    .ilan-card h3 { margin: 0 0 5px; font-size: 18px; }
+    .ilan-card p { margin: 5px 0; font-size: 14px; }
+    .status-onaylandi { color: green; font-weight: bold; }
+    .status-bekliyor { color: orange; font-weight: bold; }
+    .ilan-card button {
+      margin-top: 10px; margin-right: 5px; padding: 8px 12px;
+      font-size: 13px; background: #2980b9; color: white;
+      border: none; border-radius: 5px; cursor: pointer;
+    }
+    .ilan-card button:hover { background: #216a98; }
+    .delete-btn { background-color: #e74c3c; }
+
+    .add-btn {
+      position: fixed; bottom: 20px; right: 20px;
+      width: 60px; height: 60px; border-radius: 50%;
+      background: #2c3e50; color: #fff; font-size: 30px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      transition: background 0.3s;
+    }
+    .add-btn:hover { background: #34495e; }
+
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); display: none;
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(3px); z-index: 1000;
+    }
+    .modal {
+      background: white; padding: 20px; border-radius: 10px;
+      width: 90%; max-width: 450px; transform: scale(0.7);
+      opacity: 0; transition: all 0.3s ease; max-height: 90vh; overflow-y: auto;
+    }
+    .modal.show { transform: scale(1); opacity: 1; }
+    .modal h2 { margin-top: 0; color: #2c3e50; }
+    .modal input, .modal textarea, .modal select {
+      width: 100%; padding: 8px; margin-bottom: 10px;
+      border: 1px solid #ccc; border-radius: 5px;
+    }
+    .modal button {
+      background: #2980b9; color: white; border: none;
+      padding: 10px; width: 100%; border-radius: 5px; cursor: pointer;
+    }
+    .modal button:hover { background: #216a98; }
+    .close-btn { background: #e74c3c !important; margin-top: 5px; }
+
+    #map { width: 100%; height: 200px; margin-bottom: 10px; border-radius: 6px; }
+
+    .preview-images { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+    .preview-images img { width: 60px; height: 60px; object-fit: cover; border-radius: 5px; position: relative; }
+    .preview-images .remove-btn {
+      position: absolute; top: -5px; right: -5px; background: red; color: white;
+      border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer;
+      font-size: 12px; line-height: 18px; text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<h1>İlanlarım</h1>
+<div class="ilan-list" id="ilanListesi"></div>
+
+<div class="add-btn" id="addBtn">+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <h2 id="modalTitle">Yeni İlan Ekle</h2>
+
+    <label for="ilanTuru">İlan Türü</label>
+    <select id="ilanTuru">
+      <option value="">Seçiniz</option>
+      <option value="konut">Konut</option>
+      <option value="isyeri">İş Yeri</option>
+      <option value="arsa">Arsa</option>
+      <option value="konutProjesi">Konut Projesi</option>
+      <option value="bina">Bina</option>
+      <option value="devremulk">Devre Mülk</option>
+      <option value="turistik">Turistik Tesis</option>
+    </select>
+
+    <label for="durum">Durum</label>
+    <select id="durum">
+      <option value="">Seçiniz</option>
+      <option value="satılık">Satılık</option>
+      <option value="kiralık">Kiralık</option>
+    </select>
+
+    <label for="il">İl</label>
+    <select id="il">
+      <option value="">Seçiniz</option>
+      <option value="Antalya">Antalya</option>
+      <option value="Konya">Konya</option>
+      <option value="GaziAntep">GaziAntep</option>
+    </select>
+
+    <label for="ilce">İlçe</label>
+    <select id="ilce">
+      <option value="">Seçiniz</option>
+    </select>
+
+    <div id="detayAlanlari"></div>
+
+    <input type="text" id="title" placeholder="Başlık">
+    <input type="number" id="price" placeholder="Fiyat">
+    <textarea id="description" placeholder="Açıklama"></textarea>
+
+    <label>Fotoğraf Seç (Çoklu)</label>
+    <input type="file" id="photos" multiple>
+    <div class="preview-images" id="previewImages"></div>
+
+    <div id="map"></div>
+
+    <button id="saveBtn">Kaydet</button>
+    <button class="close-btn" id="closeBtn">Kapat</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const { createClient } = supabase;
+const supabaseUrl = "https://ofmupldxmqtgddzvbakp.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA";
+const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+let currentUser = null;
+let selectedLatLng = { lat: 39.9208, lng: 32.8541 };
+let mapInstance = null;
+let marker = null;
+let editId = null;
+let existingPhotos = [];
+
+/* --- Giriş kontrolü --- */
+async function checkAuth() {
+  const { data: { session }, error } = await supabaseClient.auth.getSession();
+  if (error || !session) {
+    window.location.href = "giris.html";
+    return;
+  }
+  currentUser = session.user;
+  loadListings();
+}
+
+/* Fotoğraf yükleme */
+async function uploadPhotos(files) {
+  const urls = [];
+  for (const file of files) {
+    const safeName = file.name
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9.]/g, "_");
+    const fileName = `${Date.now()}_${safeName}`;
+    const path = `ilanlar/${fileName}`;
+
+    const { error: uploadError } = await supabaseClient.storage
+      .from('ilan')
+      .upload(path, file);
+
+    if (uploadError) {
+      console.error("Fotoğraf yükleme hatası:", uploadError.message);
+      alert("Fotoğraf yüklenemedi: " + uploadError.message);
+      continue;
+    }
+
+    const { data } = supabaseClient.storage.from('ilan').getPublicUrl(path);
+    urls.push(data.publicUrl);
+  }
+  return urls;
+}
+
+/* Fotoğraf önizleme */
+document.getElementById('photos').addEventListener('change', function() {
+  const previewContainer = document.getElementById('previewImages');
+  previewContainer.innerHTML = '';
+  for (const file of this.files) {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    previewContainer.appendChild(img);
+  }
+});
+
+/* İlan kaydetme / güncelleme */
+document.getElementById("saveBtn").addEventListener("click", async () => {
+  if (!currentUser) {
+    alert("Giriş yapmadan ilan eklenemez!");
+    return;
+  }
+
+  const title = document.getElementById('title').value;
+  const price = document.getElementById('price').value;
+  const description = document.getElementById('description').value;
+  const ilanTuru = document.getElementById('ilanTuru').value;
+  const durum = document.getElementById('durum').value;
+  const il = document.getElementById('il').value;
+  const ilce = document.getElementById('ilce').value;
+  const files = document.getElementById('photos').files;
+
+  if (!title || !price || !ilanTuru || !durum || !il || !ilce) {
+    alert("Tüm zorunlu alanları doldurun!");
+    return;
+  }
+
+  const detaylar = {};
+  document.querySelectorAll("#detayAlanlari input, #detayAlanlari select").forEach(el => {
+    detaylar[el.id] = el.value;
+  });
+
+  let photoUrls = existingPhotos.slice(); // Mevcut fotoları koru
+  if (files.length > 0) {
+    const uploaded = await uploadPhotos(files);
+    photoUrls = photoUrls.concat(uploaded);
+  }
+
+  if (editId) {
+    // Güncelleme
+    const { error } = await supabaseClient.from('ilanlar')
+      .update({
+        title, price, description, ilan_turu: ilanTuru, durum, il, ilce,
+        detaylar, resimler: photoUrls, konum: selectedLatLng
+      })
+      .eq('id', editId);
+
+    if (!error) {
+      alert("İlan güncellendi.");
+      closeModal();
+      loadListings();
+    } else {
+      alert("Hata: " + error.message);
+    }
+  } else {
+    // Yeni ekleme
+    const { error } = await supabaseClient.from('ilanlar').insert([{
+      user_id: currentUser.id,
+      title, price, description, ilan_turu: ilanTuru, durum, il, ilce,
+      detaylar, resimler: photoUrls, konum: selectedLatLng, onay_durumu: "onayBekliyor"
+    }]);
+
+    if (!error) {
+      alert("İlan eklendi.");
+      closeModal();
+      loadListings();
+    } else {
+      alert("Hata: " + error.message);
+    }
+  }
+});
+
+/* İlan listeleme */
+async function loadListings() {
+  const container = document.getElementById("ilanListesi");
+  container.innerHTML = "Yükleniyor...";
+
+  const { data, error } = await supabaseClient.from('ilanlar').select('*').eq('user_id', currentUser.id);
+
+  if (error) {
+    container.innerHTML = "Hata: " + error.message;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    container.innerHTML = "<p>Henüz ilanınız yok.</p>";
+    return;
+  }
+
+  container.innerHTML = "";
+  data.forEach(ilan => {
+    const statusClass = ilan.onay_durumu === "onaylandi" ? "status-onaylandi" : "status-bekliyor";
+    const statusText = ilan.onay_durumu === "onaylandi" ? "Onaylandı" : "Onay Bekliyor";
+    const firstImage = ilan.resimler && ilan.resimler.length > 0 ? ilan.resimler[0] : '';
+
+    const div = document.createElement("div");
+    div.className = "ilan-card";
+    div.innerHTML = `
+      ${firstImage ? `<img src="${firstImage}">` : ''}
+      <h3>${ilan.title} <small>(${ilan.ilan_turu})</small></h3>
+      <p><strong>Durum:</strong> ${ilan.durum}</p>
+      <p><strong>İl/İlçe:</strong> ${ilan.il} / ${ilan.ilce}</p>
+      <p><strong>Fiyat:</strong> ${ilan.price} TL</p>
+      <p class="${statusClass}">${statusText}</p>
+      <button onclick="editListing('${ilan.id}')">Düzenle</button>
+      <button class="delete-btn" onclick="deleteListing('${ilan.id}', ${JSON.stringify(ilan.resimler)})">Sil</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+/* İlan düzenleme */
+async function editListing(id) {
+  editId = id;
+  const { data } = await supabaseClient.from('ilanlar').select('*').eq('id', id).single();
+  if (!data) return;
+
+  document.getElementById("modalTitle").textContent = "İlan Düzenle";
+  document.getElementById("title").value = data.title;
+  document.getElementById("price").value = data.price;
+  document.getElementById("description").value = data.description;
+  document.getElementById("ilanTuru").value = data.ilan_turu;
+  document.getElementById("durum").value = data.durum;
+  document.getElementById("il").value = data.il;
+
+  // İlçeleri doldur ve seçili yap
+  const ilceSelect = document.getElementById("ilce");
+  ilceSelect.innerHTML = `<option value="">Seçiniz</option>`;
+  if (ilceler[data.il]) {
+    ilceler[data.il].forEach(ilce => {
+      const opt = document.createElement("option");
+      opt.value = ilce;
+      opt.textContent = ilce;
+      ilceSelect.appendChild(opt);
+    });
+  }
+  document.getElementById("ilce").value = data.ilce;
+
+  // Detay alanlarını doldur
+  createDetayAlanlari(data.ilan_turu);
+  for (const key in data.detaylar) {
+    if (document.getElementById(key)) {
+      document.getElementById(key).value = data.detaylar[key];
+    }
+  }
+
+  // Fotoğrafları göster
+  existingPhotos = data.resimler || [];
+  const previewContainer = document.getElementById('previewImages');
+  previewContainer.innerHTML = '';
+  existingPhotos.forEach((url, index) => {
+    const wrapper = document.createElement('div');
+    wrapper.style.position = "relative";
+    const img = document.createElement('img');
+    img.src = url;
+    const removeBtn = document.createElement('button');
+    removeBtn.className = "remove-btn";
+    removeBtn.innerHTML = "×";
+    removeBtn.onclick = () => {
+      existingPhotos.splice(index, 1);
+      wrapper.remove();
+    };
+    wrapper.appendChild(img);
+    wrapper.appendChild(removeBtn);
+    previewContainer.appendChild(wrapper);
+  });
+
+  modalOverlay.style.display = 'flex';
+  setTimeout(() => modal.classList.add('show'), 10);
+}
+
+/* İlan silme */
+async function deleteListing(id, images) {
+  if (!confirm("Bu ilanı silmek istediğinize emin misiniz?")) return;
+
+  // Storage fotoğrafları sil
+  if (images && images.length > 0) {
+    for (const url of images) {
+      const path = url.split('/storage/v1/object/public/ilan/')[1];
+      if (path) {
+        await supabaseClient.storage.from('ilan').remove([path]);
+      }
+    }
+  }
+
+  // DB kaydı sil
+  await supabaseClient.from('ilanlar').delete().eq('id', id);
+  loadListings();
+}
+
+/* Modal kontrolü ve harita */
+const modalOverlay = document.getElementById('modalOverlay');
+const modal = document.getElementById('modal');
+document.getElementById('addBtn').addEventListener('click', () => {
+  resetForm();
+  modalOverlay.style.display = 'flex';
+  setTimeout(() => modal.classList.add('show'), 10);
+  initMap();
+});
+document.getElementById('closeBtn').addEventListener('click', closeModal);
+
+function closeModal() {
+  modal.classList.remove('show');
+  setTimeout(() => modalOverlay.style.display = 'none', 300);
+  resetForm();
+}
+
+function resetForm() {
+  editId = null;
+  existingPhotos = [];
+  document.getElementById("modalTitle").textContent = "Yeni İlan Ekle";
+  document.getElementById('title').value = '';
+  document.getElementById('price').value = '';
+  document.getElementById('description').value = '';
+  document.getElementById('ilanTuru').value = '';
+  document.getElementById('durum').value = '';
+  document.getElementById('il').value = '';
+  document.getElementById('ilce').innerHTML = '<option value="">Seçiniz</option>';
+  document.getElementById('detayAlanlari').innerHTML = '';
+  document.getElementById('previewImages').innerHTML = '';
+  document.getElementById('photos').value = '';
+}
+
+/* Harita */
+function initMap() {
+  if (mapInstance) mapInstance.remove();
+  mapInstance = L.map('map').setView([selectedLatLng.lat, selectedLatLng.lng], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapInstance);
+  marker = L.marker(selectedLatLng, { draggable: true }).addTo(mapInstance);
+  marker.on('dragend', e => selectedLatLng = e.target.getLatLng());
+  mapInstance.on('click', e => { marker.setLatLng(e.latlng); selectedLatLng = e.latlng; });
+  setTimeout(() => mapInstance.invalidateSize(), 300);
+}
+
+/* İl-İlçe */
+const ilceler = {
+  Antalya: ["Akseki","Alanya","Elmalı","Finike","Gazipaşa","Gündoğmuş","İbradı","Demre","Kaş","Kemer","Korkuteli","Kumluca","Manavgat","Serik","Muratpaşa","Konyaaltı","Aksu","Döşemealtı","Kepez"],
+  Konya: ["Beyşehir","Bozkır","Derebucak","Hüyük","Ereğli","Seydişehir","Ahırlı","Akören","Çumra","Derbent","Kadınhanı","Akşehir","Altıneki","Cihanbeyli","Çeltik","Doğanhisar","Emirgazi"],
+  GaziAntep: ["Gaziantep (merkez)","Araban","İslahiye","Karkamış","Nizip","Oğuzeli","Nurdağı","Şahinbey","Şehit Kamil","Yavuzeli"]
+};
+
+document.getElementById("il").addEventListener("change", function () {
+  const secilenIl = this.value;
+  const ilceSelect = document.getElementById("ilce");
+  ilceSelect.innerHTML = `<option value="">Seçiniz</option>`;
+  if (ilceler[secilenIl]) {
+    ilceler[secilenIl].forEach(ilce => {
+      const opt = document.createElement("option");
+      opt.value = ilce;
+      opt.textContent = ilce;
+      ilceSelect.appendChild(opt);
+    });
+  }
+});
+
+/* Dinamik detay alanları */
+document.getElementById("ilanTuru").addEventListener("change", () => {
+  createDetayAlanlari(document.getElementById("ilanTuru").value);
+});
+
+function createDetayAlanlari(tur) {
+  const detayContainer = document.getElementById("detayAlanlari");
+  let html = "";
+
+  if (tur === "konut") {
+    html = `
+      <input type="text" id="odaSayisi" placeholder="Oda Sayısı">
+      <input type="number" id="m2Brut" placeholder="m² (Brüt)">
+      <input type="number" id="m2Net" placeholder="m² (Net)">
+      <label>Isıtma Türü</label>
+      <select id="isitma">
+        <option value="">Seçiniz</option>
+        <option value="Klima">Klima</option>
+        <option value="Doğalgaz">Doğalgaz</option>
+      </select>
+      <label>Balkon</label>
+      <select id="balkon"><option value="Evet">Evet</option><option value="Hayır">Hayır</option></select>
+      <label>Site İçinde</label>
+      <select id="siteIci"><option value="Evet">Evet</option><option value="Hayır">Hayır</option></select>
+    `;
+  } else if (tur === "isyeri") {
+    html = `
+      <input type="number" id="m2" placeholder="m²">
+      <input type="number" id="katSayisi" placeholder="Kat Sayısı">
+      <label>Kullanım Durumu</label>
+      <select id="kullanimDurumu">
+        <option value="">Seçiniz</option>
+        <option value="Boş">Boş</option>
+        <option value="Dolu">Dolu</option>
+      </select>
+    `;
+  } else if (tur === "arsa") {
+    html = `
+      <input type="number" id="m2" placeholder="m²">
+      <label>İmar Durumu</label>
+      <select id="imarDurumu">
+        <option value="">Seçiniz</option>
+        <option value="Var">Var</option>
+        <option value="Yok">Yok</option>
+      </select>
+    `;
+  } else {
+    html = `<p>Bu tür için özel alan yok.</p>`;
+  }
+
+  detayContainer.innerHTML = html;
+}
+
+/* Sayfa yüklenince kontrol */
+checkAuth();
+</script>
+</body>
+</html>
