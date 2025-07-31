@@ -11,51 +11,51 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
   <style>
-    body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    #map { height: calc(100vh - 120px); width: 100%; }
-    #filters {
-      background: #ecf0f1;
-      padding: 10px;
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
+      flex-direction: column;
+      height: 100vh;
     }
-    select, button {
-      padding: 8px;
-      font-size: 14px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
+
     header {
       background-color: #2c3e50;
       color: white;
-      padding: 15px 20px;
+      padding: 10px 15px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    header h1 { font-size: 24px; margin: 0; flex-grow: 1; }
+    header h1 {
+      font-size: 20px;
+      margin: 0;
+      flex-grow: 1;
+      text-align: center;
+    }
+
+    #menuToggle {
+      background:none; border:none; cursor:pointer; display:flex;
+      flex-direction: column; justify-content:center; gap:5px; padding:8px;
+    }
+    #menuToggle span { display:block; height:3px; background:#fff; border-radius:2px; width:25px; }
+
     .profile-menu { position: relative; }
     .profile-icon {
       background-color: #000; border: none; color: white; font-size: 16px;
-      border-radius: 50%; width: 40px; height: 40px; cursor: pointer;
+      border-radius: 50%; width: 36px; height: 36px; cursor: pointer;
     }
     .dropdown-menu {
-      position: absolute; top: 50px; right: 0; background: white;
+      position: absolute; top: 45px; right: 0; background: white;
       border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      display: none; flex-direction: column; min-width: 160px; z-index: 1000;
+      display: none; flex-direction: column; min-width: 150px; z-index: 1000;
     }
     .dropdown-menu button {
-      padding: 12px 16px; background: none; border: none; text-align: left;
+      padding: 10px 14px; background: none; border: none; text-align: left;
       font-size: 14px; cursor: pointer; border-bottom: 1px solid #eee;
     }
     .dropdown-menu button:hover { background-color: #f0f0f0; }
-    #menuToggle {
-      background:none; border:none; cursor:pointer; display:flex;
-      flex-direction: column; justify-content:center; gap:6px; padding:10px; margin-right: 15px;
-    }
-    #menuToggle span { display:block; height:3px; background:#000; border-radius:2px; width:25px; }
+
     #sideMenu {
       position: fixed; top: 0; left: -250px; width: 250px; height: 100%;
       background: #2c3e50; padding: 20px; box-sizing: border-box;
@@ -63,10 +63,31 @@
     }
     #sideMenu ul { list-style:none; padding:0; }
     #sideMenu ul li { margin-bottom: 15px; transition: transform 0.2s ease; }
-    #sideMenu ul li:hover { transform: scale(1.1); }
+    #sideMenu ul li:hover { transform: scale(1.05); }
     #sideMenu ul li a { color:white; text-decoration:none; font-size: 16px; display:block; }
 
-    /* Marker Nokta Tasarımı */
+    #filters {
+      background: #ecf0f1;
+      padding: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+    select, button, input[type="number"], input[type="text"] {
+      padding: 6px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      transition: all 0.2s ease-in-out;
+    }
+    button:hover, select:hover, input:hover {
+      transform: scale(1.05);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    }
+
+    #map { flex: 1; width: 100%; }
+
     .dot-marker {
       width: 14px;
       height: 14px;
@@ -80,7 +101,6 @@
       box-shadow: 0 0 8px rgba(0,0,0,0.6);
     }
 
-    /* Popup Kart Tasarımı */
     .leaflet-popup-content { margin:0; padding:0; }
     .popup-card {
       display: flex;
@@ -91,7 +111,9 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       font-family: Arial, sans-serif;
       cursor: pointer;
+      transition: transform 0.2s ease;
     }
+    .popup-card:hover { transform: scale(1.03); }
     .popup-card img {
       width: 100px;
       height: 100px;
@@ -124,8 +146,11 @@
       font-weight: bold;
     }
 
-    /* Responsive: Mobilde dikey tasarım */
-    @media (max-width: 480px) {
+    @media (max-width: 768px) {
+      #filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
       .popup-card {
         flex-direction: column;
         width: 220px;
@@ -133,6 +158,9 @@
       .popup-card img {
         width: 100%;
         height: 140px;
+      }
+      header h1 {
+        font-size: 16px;
       }
     }
   </style>
@@ -147,21 +175,19 @@
   
   <h1>PİHALE Harita Uygulaması</h1>
   
-  <div style="display: flex; align-items: center; gap: 10px;">
-    <div class="profile-menu">
-      <button class="profile-icon" id="profileBtn">👤</button>
-      <div class="dropdown-menu" id="profileMenu">
-        <button onclick="window.location.href='profil.html'">Profilim</button>
-        <button onclick="window.location.href='analiz.html'">Analiz</button>
-        <button onclick="window.location.href='ilanlarim.html'">İlanlarım</button>
-        <button onclick="window.location.href='ayarlar.html'">Ayarlar</button>
-        <button onclick="logout()">Çıkış Yap</button>
-      </div>
+  <div class="profile-menu">
+    <button class="profile-icon" id="profileBtn">👤</button>
+    <div class="dropdown-menu" id="profileMenu">
+      <button onclick="window.location.href='profil.html'">Profilim</button>
+      <button onclick="window.location.href='analiz.html'">Analiz</button>
+      <button onclick="window.location.href='ilanlarim.html'">İlanlarım</button>
+      <button onclick="window.location.href='ayarlar.html'">Ayarlar</button>
+      <button onclick="logout()">Çıkış Yap</button>
     </div>
   </div>
 </header>
 
-  <nav id="sideMenu">
+<nav id="sideMenu">
   <h2>Menü</h2>
   <ul>
     <li><a href="hizlisatis.html">Hızlı İhale</a></li>
@@ -176,20 +202,19 @@
   </ul>
 </nav>
 
-
 <div id="filters">
+  <input type="text" id="title-filter" placeholder="Başlık Ara" />
   <select id="status-filter">
     <option value="">Durum</option>
     <option value="satılık">Satılık</option>
     <option value="kiralık">Kiralık</option>
   </select>
-  <select id="il-filter">
-    <option value="">İl</option>
-    <option value="Antalya">Antalya</option>
-    <option value="Konya">Konya</option>
-    <option value="Gaziantep">Gaziantep</option>
-  </select>
+  <select id="il-filter"><option value="">İl</option></select>
   <select id="ilce-filter"><option value="">İlçe</option></select>
+  <input type="number" id="oda-min" placeholder="Min Oda" />
+  <input type="number" id="oda-max" placeholder="Max Oda" />
+  <input type="number" id="m2-min" placeholder="Min m²" />
+  <input type="number" id="m2-max" placeholder="Max m²" />
   <button onclick="applyFilters()">Filtrele</button>
 </div>
 
@@ -203,13 +228,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const { createClient } = supabase;
-
 const supabaseUrl = "https://ofmupldxmqtgddzvbakp.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA";
-
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA"; // kendi anahtarını koy
 const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-// Harita başlat
 const map = L.map('map', {
   zoomControl: false,
   minZoom: 6,
@@ -228,11 +250,14 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 const markersGroup = L.markerClusterGroup();
 map.addLayer(markersGroup);
 
-// Marker ekleme (Yeni sütun yapısına uygun)
 function addMarker(ilan) {
-  if (!ilan.konum) return;
+  let konum = ilan.konum;
+  if (typeof konum === "string") {
+    try { konum = JSON.parse(konum); } catch (e) { return; }
+  }
+  if (!konum || !konum.lat || !konum.lng) return;
 
-  const renk = ilan.durum === "satılık" ? "#e67e22" : "#27ae60";
+  const renk = (ilan.durum || "").toLowerCase() === "satılık" ? "#e67e22" : "#27ae60";
 
   const customIcon = L.divIcon({
     className: "custom-dot",
@@ -241,25 +266,22 @@ function addMarker(ilan) {
     iconAnchor: [8, 8]
   });
 
-  // Detaylar JSON parse
   let detay = ilan.detaylar || {};
   if (typeof detay === "string") {
     try { detay = JSON.parse(detay); } catch (e) { detay = {}; }
   }
 
-  // Resimler JSON parse
   let resimler = ilan.resimler || [];
   if (typeof resimler === "string") {
     try { resimler = JSON.parse(resimler); } catch (e) { resimler = []; }
   }
   const ilkResim = resimler.length > 0 ? resimler[0] : 'https://via.placeholder.com/100';
 
-  // Değerleri al
   const odaSayisi = detay.oda_sayisi || detay.odaSayisi || "-";
   const kat = detay.kat || "-";
   const m2Brut = detay.m2_brut || detay.m2Brut || "-";
 
-  const marker = L.marker([ilan.konum.lat, ilan.konum.lng], { icon: customIcon });
+  const marker = L.marker([konum.lat, konum.lng], { icon: customIcon });
 
   marker.bindPopup(`
     <div class="popup-card" onclick="window.location.href='ilan-detay.html?id=${ilan.id}'">
@@ -268,6 +290,7 @@ function addMarker(ilan) {
         <strong>${ilan.title || 'Başlık Yok'}</strong>
         <div class="details">📍 ${ilan.ilce || '-'}, ${ilan.il || '-'}</div>
         <div class="details">📏 ${m2Brut} m² • 🛏 ${odaSayisi} • 🏢 ${kat}</div>
+        <div class="details">Durum: ${(ilan.durum || '-').toUpperCase()}</div>
         <div class="price">${ilan.price ? ilan.price + ' TL' : 'Fiyat Yok'}</div>
       </div>
     </div>
@@ -276,7 +299,6 @@ function addMarker(ilan) {
   markersGroup.addLayer(marker);
 }
 
-// İlanları yükle
 async function loadListings() {
   const { data, error } = await supabaseClient
     .from('ilanlar')
@@ -293,25 +315,75 @@ async function loadListings() {
   window.allListings.forEach(addMarker);
 }
 
-loadListings();
+async function loadFilters() {
+  const { data, error } = await supabaseClient
+    .from('ilanlar')
+    .select('il, ilce')
+    .eq('onay_durumu', 'onaylandi');
 
-// Filtreleme
+  if (error) {
+    console.error("Filtre verileri alınamadı:", error.message);
+    return;
+  }
+
+  const iller = [...new Set(data.map(item => item.il).filter(Boolean))];
+  const ilSelect = document.getElementById('il-filter');
+  iller.forEach(il => {
+    const opt = document.createElement('option');
+    opt.value = il;
+    opt.textContent = il;
+    ilSelect.appendChild(opt);
+  });
+
+  ilSelect.addEventListener('change', () => {
+    const secilenIl = ilSelect.value;
+    const ilceSelect = document.getElementById('ilce-filter');
+    ilceSelect.innerHTML = '<option value="">İlçe</option>';
+
+    data.filter(item => item.il === secilenIl).forEach(item => {
+      if (item.ilce) {
+        const opt = document.createElement('option');
+        opt.value = item.ilce;
+        opt.textContent = item.ilce;
+        ilceSelect.appendChild(opt);
+      }
+    });
+  });
+}
+
 function applyFilters() {
+  const title = document.getElementById('title-filter').value.toLowerCase();
   const durum = document.getElementById('status-filter').value;
   const il = document.getElementById('il-filter').value;
   const ilce = document.getElementById('ilce-filter').value;
+  const odaMin = parseInt(document.getElementById('oda-min').value) || 0;
+  const odaMax = parseInt(document.getElementById('oda-max').value) || 999;
+  const m2Min = parseInt(document.getElementById('m2-min').value) || 0;
+  const m2Max = parseInt(document.getElementById('m2-max').value) || 9999;
 
-  const filtered = window.allListings.filter(item =>
-    (!durum || item.durum === durum) &&
-    (!il || item.il === il) &&
-    (!ilce || item.ilce === ilce)
-  );
+  const filtered = window.allListings.filter(item => {
+    let detay = item.detaylar;
+    if (typeof detay === "string") {
+      try { detay = JSON.parse(detay); } catch { detay = {}; }
+    }
+
+    const odaSayisi = parseInt(detay.oda_sayisi || detay.odaSayisi || 0);
+    const m2Brut = parseInt(detay.m2_brut || detay.m2Brut || 0);
+
+    return (
+      (!title || (item.title && item.title.toLowerCase().includes(title))) &&
+      (!durum || item.durum === durum) &&
+      (!il || item.il === il) &&
+      (!ilce || item.ilce === ilce) &&
+      (odaSayisi >= odaMin && odaSayisi <= odaMax) &&
+      (m2Brut >= m2Min && m2Brut <= m2Max)
+    );
+  });
 
   markersGroup.clearLayers();
   filtered.forEach(addMarker);
 }
 
-// Menü
 document.addEventListener("DOMContentLoaded", () => {
   const menuToggle = document.getElementById('menuToggle');
   const sideMenu = document.getElementById('sideMenu');
@@ -337,13 +409,17 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener('click', () => {
     profileMenu.style.display = 'none';
   });
-
-  window.logout = function () {
-    localStorage.clear();
-    alert("Çıkış yapılıyor...");
-    window.location.href = "giris.html";
-  };
 });
+
+async function logout() {
+  await supabaseClient.auth.signOut();
+  localStorage.clear();
+  alert("Çıkış yapılıyor...");
+  window.location.href = "giris.html";
+}
+
+loadListings();
+loadFilters();
 </script>
 
 </body>
