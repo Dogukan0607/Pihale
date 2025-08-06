@@ -2,118 +2,272 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <title>Giriş Yap</title>
+  <title>PIHALE - Giriş Yap</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
       margin: 0;
       padding: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to right, #2c3e50, #3498db);
+      background: #1e272e;
+      color: #fff;
       display: flex;
-      align-items: center;
-      justify-content: center;
       height: 100vh;
-      color: white;
+      overflow: hidden;
     }
-    .login-container {
-      background-color: rgba(0, 0, 0, 0.6);
-      padding: 40px;
-      border-radius: 12px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-      width: 90%;
-      max-width: 400px;
+
+    /* Sol kısım: kaydırılabilir kutular */
+    .left-section {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      box-sizing: border-box;
     }
-    .login-container h1 {
+
+    .slide-row {
+      display: flex;
+      background: #222831;
+      border-radius: 20px;
+      overflow: hidden;
       margin-bottom: 20px;
-      font-size: 28px;
+      min-height: 250px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
-    .login-container input,
-    .login-container select,
+
+    /* Sol taraf: slider */
+    .slide-images {
+      width: 400px;
+      height: 600px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide-images img {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transform: translateX(100%);
+      transition: opacity 1s ease, transform 1s ease;
+    }
+
+    .slide-images img.active {
+      opacity: 1;
+      transform: translateX(0);
+      z-index: 1;
+    }
+
+    /* Sağ taraf: açıklama */
+    .slide-info {
+      width: 25%;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .slide-info h2 {
+      margin: 0 0 10px;
+      font-size: 22px;
+      color: #3498db;
+    }
+
+    .slide-info p {
+      margin: 0;
+      font-size: 15px;
+      color: #ccc;
+      line-height: 1.5;
+    }
+
+    /* Sağdaki giriş paneli sabit */
+    .login-container {
+      width: 350px;
+      background: rgba(30, 30, 30, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 50px 40px;
+      border-radius: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin: auto 5%;
+      height: 450px;
+      position: fixed;
+      right: 5%;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .brand-title {
+      font-size: 36px;
+      font-weight: bold;
+      color: #3498db;
+      letter-spacing: 2px;
+    }
+
+    .login-container h1 {
+      font-size: 24px;
+      margin: 20px 0;
+      color: #ecf0f1;
+    }
+
+    .login-container input {
+      width: 100%;
+      padding: 14px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      background: #2f3640;
+      color: #fff;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
     .login-container button {
       width: 100%;
-      margin: 10px 0;
-      padding: 12px;
-      font-size: 16px;
+      padding: 14px;
+      margin-top: 20px;
       border: none;
       border-radius: 8px;
-    }
-    input {
-      background-color: white;
-      color: black;
-    }
-    button {
-      background-color: #2c3e50;
-      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      background: #3498db;
+      color: #fff;
       cursor: pointer;
+      transition: background 0.3s ease, transform 0.2s ease;
     }
-    button:hover {
-      background-color: #34495e;
+
+    .login-container button:hover {
+      background: #2980b9;
+      transform: translateY(-2px);
     }
+
     .error {
-      color: #f88;
+      color: #ff6b6b;
       font-size: 14px;
       min-height: 20px;
+      margin-top: 5px;
+    }
+
+    .contact-btn {
+      position: absolute;
+      bottom: 15px;
+      right: 15px;
+      background: #16a085;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      text-decoration: none;
+      transition: background 0.3s ease;
+    }
+
+    .contact-btn:hover {
+      background: #1abc9c;
+    }
+
+    /* Scrollbar özelleştirme */
+    .left-section::-webkit-scrollbar {
+      width: 8px;
+    }
+    .left-section::-webkit-scrollbar-thumb {
+      background: #3498db;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body>
-  <div class="login-container">
-    <h1>Giriş Yap</h1>
+  <!-- Sol taraftaki slider kutuları -->
+  <div class="left-section">
+    <!-- 1. kutu -->
+    <div class="slide-row">
+      <div class="slide-images">
+        <img src="images/1-2.png" class="active">
+        <img src="images/1-3.png">
+        <img src="images/1-4.png">
+      </div>
+      <div class="slide-info">
+        <h2>Gayrimenkul Sektöründe Yeni Bir Dönem: Pihale
+</h2>
+        <p>Gayrimenkul sektörü, hızla dijitalleşen dünyaya rağmen hâlâ geleneksel ilan yöntemlerine bağlı kalmış durumda. Sabit fiyatlı ilanlar, çoğu zaman gerçek piyasa değerini yansıtmakta yetersiz kalıyor; bu durum hem alıcı hem de satıcı için adil bir zeminde buluşmayı zorlaştırıyor.
 
-    <select id="userType">
-      <option value="">Kullanıcı Türü Seçin</option>
-      <option value="emlakci">Emlakçı</option>
-      <option value="insaat">İnşaat Şirketi</option>
-    </select>
+Pihale, bu sorunu çözmek için geliştirildi. Emlakçılar, yatırımcılar, bireysel alıcılar ve satıcıları dinamik, rekabetçi ve güvenli bir teklif platformunda bir araya getiriyoruz. Gerçek zamanlı teklif sistemi sayesinde piyasanın güncel nabzını tutuyor, gayrimenkul alım-satım süreçlerini daha şeffaf ve kazançlı hale getiriyoruz.
 
-    <input type="email" id="email" placeholder="E-posta" />
-    <input type="password" id="password" placeholder="Şifre" />
-    <div id="error" class="error"></div>
+</p>
+      </div>
+    </div>
 
-    <button onclick="girisYap()">Giriş Yap</button>
+    <!-- 2. kutu -->
+    <div class="slide-row">
+      <div class="slide-images">
+        <img src="images/2-2.png" class="active">
+        <img src="images/2-3.png">
+      </div>
+      <div class="slide-info">
+        <h2>Misyonumuz;</h2>
+        <p>Gayrimenkul alım-satım süreçlerinde:</p>
+        <p>Zamanı verimli kullanan,</p>
+        <p>Teklif esaslı fiyatlandırmayı esas alan,</p>
+        <p>Aracıların ve yatırım danışmanlarının haklarını koruyan,</p>
+        <p>Alıcı ve satıcıyı şeffaf, güvenilir ve hızlı bir şekilde buluşturan
+bir platform oluşturmak</p>
+      </div>
+    </div>
+
+    <!-- 3. kutu -->
+    <div class="slide-row">
+      <div class="slide-images">
+        <img src="images/3-1.png" class="active">
+        <img src="images/3-2.png">
+      </div>
+      <div class="slide-info">
+        <h2>Vizyonumuz;</h2>
+        <p>Geleneksel ilan sistemine alternatif olarak:</p>
+        <p>Yapay zekâ destekli analizlerle doğru fiyat,</p>
+        <p>PropTech (property+technology) çözümleriyle veriye dayalı yatırım,</p>
+        <p>Güçlü altyapısı ve kullanıcı dostu arayüzüyle sürdürülebilir dijital dönüşüm sağlamak.</p>
+        <p>Hedefimiz, sadece bir ilan platformu olmak değil; sektördeki fiyat belirleme anlayışını yeniden tanımlamak ve gayrimenkulde dijital rekabetin adresi haline gelmektir.</p>
+
+      </div>
+    </div>
   </div>
 
-  <!-- Supabase -->
+  <!-- Sağ giriş paneli -->
+  <div class="login-container">
+    <div>
+      <div class="brand-title">PIHALE</div>
+      <h1>Giriş Yap</h1>
+      <input type="email" id="email" placeholder="E-posta" />
+      <input type="password" id="password" placeholder="Şifre" />
+      <div id="error" class="error"></div>
+      <button onclick="girisYap()">Giriş Yap</button>
+    </div>
+    <a href="mailto:destek@pihale.com" class="contact-btn">İletişim</a>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Supabase Config
-    const SUPABASE_URL = "https://ofmupldxmqtgddzvbakp.supabase.co";  // kendi Supabase URL'in
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA";               // kendi anon key'in
+    const SUPABASE_URL = "https://ofmupldxmqtgddzvbakp.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
     const errorEl = document.getElementById("error");
 
     async function girisYap() {
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
-      const userType = document.getElementById("userType").value;
 
-      // Admin değilse kullanıcı türü zorunlu
-      if (email !== "admin@admin.com" && !userType) {
-        errorEl.textContent = "Lütfen kullanıcı türü seçiniz.";
-        return;
-      }
-
-      // Supabase Auth ile giriş
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password
-      });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
         errorEl.textContent = "E-posta veya şifre hatalı.";
         return;
       }
 
-      // Kullanıcı bilgilerini localStorage'a kaydet
       localStorage.setItem("email", email);
-      if (email !== "admin@admin.com") {
-        localStorage.setItem("userType", userType);
-      }
 
-      // Yönlendirme
       if (email === "admin@admin.com") {
         window.location.href = "admin.html";
       } else {
@@ -121,20 +275,18 @@
       }
     }
 
-    // Enter tuşu ile giriş
-    document.addEventListener("keydown", function(event) {
-      if (event.key === "Enter") {
-        girisYap();
-      }
-    });
+    // Slider otomatik geçiş
+    const allSlideGroups = document.querySelectorAll('.slide-images');
+    let index = 0;
 
-    // Oturum kontrolü: kullanıcı giriş yaptıysa login sayfasına tekrar gelmesin
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        window.location.href = "index.html";
-      }
-    })();
+    setInterval(() => {
+      allSlideGroups.forEach(group => {
+        const images = group.querySelectorAll('img');
+        images.forEach(img => img.classList.remove('active'));
+        images[index % images.length].classList.add('active');
+      });
+      index++;
+    }, 10000);
   </script>
 </body>
 </html>

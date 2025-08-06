@@ -10,6 +10,25 @@
     .container { display: flex; flex-wrap: wrap; max-width: 1200px; margin: 20px auto; gap: 20px; }
     .left { flex: 1 1 60%; background: #fff; border-radius: 8px; overflow: hidden; }
     .right { flex: 1 1 35%; perspective: 1000px; }
+/* Fullscreen Modal */
+.fullscreen-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.fullscreen-modal img,
+.fullscreen-modal video {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 8px;
+}
+.fullscreen-modal.hidden { display: none; }
 
     /* Flip Card */
     .flip-card {
@@ -44,7 +63,7 @@
     .detail-table { width: 100%; border-collapse: collapse; font-size: 16px; }
     .detail-table td { padding: 6px 4px; border-bottom: 1px solid #ddd; }
 
-    /* Açıklama en alt */
+    /* Açıklama Kutusu */
     .description-box {
       max-width: 1200px;
       margin: 20px auto;
@@ -53,18 +72,28 @@
       padding: 15px;
       font-size: 16px;
       color: #333;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      position: relative;
+    }
+    .show-more {
+      display: block;
+      margin-top: 8px;
+      color: #2c3e50;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: underline;
     }
 
     /* Slider */
     .slider-wrapper { position: relative; width: 100%; height: 400px; overflow: hidden; }
     .slider { display: flex; width: 100%; height: 100%; transition: transform 0.5s ease-in-out; }
-    .slider img {
+    .slider img, .slider video {
       width: 100%;
       height: 100%;
-      object-fit: contain;       /* Orantılı kırpmadan göster */
-      background-color: #000; /* Boş alan siyah doldurulsun */
+      object-fit: contain;
+      background-color: #000;
       flex-shrink: 0;
-      aspect-ratio: 16/9;      /* Mobilde oran koruma */
+      aspect-ratio: 16/9;
     }
     .slider-btn {
       position: absolute;
@@ -78,8 +107,31 @@
       cursor: pointer;
       border-radius: 50%;
       z-index: 2;
+      transition: transform 0.2s ease;
     }
+    .slider-btn:hover { transform: translateY(-50%) scale(1.1); }
     .prev { left: 10px; } .next { right: 10px; }
+
+    /* Slider Dots */
+    .slider-dots {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+    .slider-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #fff;
+      opacity: 0.6;
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+    .slider-dots span.active { opacity: 1; background: #2c3e50; }
+
     #map { width: 100%; height: 200px; margin-top: 10px; }
 
     .toggle-btn {
@@ -92,9 +144,9 @@
       border-radius: 6px;
       cursor: pointer;
       font-size: 16px;
-      transition: background 0.3s;
+      transition: background 0.3s, transform 0.2s;
     }
-    .toggle-btn:hover { background: #1a252f; }
+    .toggle-btn:hover { background: #1a252f; transform: scale(1.05); }
 
     /* Mobil uyum */
     @media (max-width: 900px) {
@@ -102,10 +154,8 @@
       .left, .right { flex: 1 1 100%; }
       .flip-card { transform: none !important; }
       .flip-side, .flip-back { position: relative; transform: none; backface-visibility: visible; }
-
-      .slider-wrapper { height: auto; }      /* Mobilde yükseklik içerik oranına göre ayarlanır */
-      .slider img { aspect-ratio: 16/9; }    /* Mobilde orantılı görüntü */
-
+      .slider-wrapper { height: auto; }
+      .slider img, .slider video { aspect-ratio: 16/9; }
       .tab-buttons { display: flex; justify-content: center; gap: 10px; margin: 10px 0; }
       .tab-buttons button {
         flex: 1;
@@ -114,6 +164,7 @@
         background: #fff;
         font-size: 16px;
         cursor: pointer;
+        transition: background 0.3s;
       }
       .tab-buttons button.active { background: #2c3e50; color: #fff; }
       .tab-content { display: none; }
@@ -122,17 +173,20 @@
   </style>
 </head>
 <body>
+  
   <div id="detail-container"><p>Yükleniyor...</p></div>
   <div id="aciklama-kutusu" class="description-box" style="display:none;"></div>
+  <div id="fullscreenModal" class="fullscreen-modal hidden">
+  <span id="closeFullscreen" style="position:absolute;top:20px;right:30px;font-size:40px;color:#fff;cursor:pointer;">&times;</span>
+  <div id="fullscreenContent"></div>
+</div>
+
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    /* --- KODUN TAMAMI AYNI, GÖRSEL YAPISI KORUNDU --- */
-    /* Sadece CSS ve slider img kısmı güncellendi */
-
     const supabaseUrl = "https://ofmupldxmqtgddzvbakp.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA"; // Kendi Supabase public keyini koy
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
     function getQueryParam(key) {
@@ -159,9 +213,7 @@
 
       // JSON parse
       let detay = ilan.detaylar || {};
-      if (typeof detay === "string") {
-        try { detay = JSON.parse(detay); } catch (e) { detay = {}; }
-      }
+      if (typeof detay === "string") { try { detay = JSON.parse(detay); } catch (e) { detay = {}; } }
 
       const brut = detay.m2_brut || detay.m2Brut || "-";
       const net = detay.m2_net || detay.m2Net || "-";
@@ -174,34 +226,29 @@
       const banyoSayisi = detay.banyo_sayisi || detay.banyoSayisi || "-";
 
       let images = ilan.resimler || [];
-      if (typeof images === "string") {
-        try { images = JSON.parse(images); } catch (e) { images = []; }
-      }
-      if (images.length === 0) {
-        images = ["https://via.placeholder.com/1200x350?text=Resim+Yok"];
-      }
+      if (typeof images === "string") { try { images = JSON.parse(images); } catch (e) { images = []; } }
+      if (images.length === 0) images = ["https://via.placeholder.com/1200x350?text=Resim+Yok"];
 
       let calisanlar = user?.calisanlar || {};
-      if (typeof calisanlar === "string") {
-        try { calisanlar = JSON.parse(calisanlar); } catch (e) { calisanlar = {}; }
-      }
+      if (typeof calisanlar === "string") { try { calisanlar = JSON.parse(calisanlar); } catch (e) { calisanlar = {}; } }
 
       const sliderHTML = `
         <div class="slider-wrapper">
           <div class="slider" id="slider">
-            ${images.map(img => `<img src="${img}" alt="İlan Resmi">`).join(' ')}
+            ${images.map(media => media.endsWith('.mp4')
+              ? `<video src="${media}" controls></video>`
+              : `<img src="${media}" alt="İlan Medyası">`).join('')}
           </div>
           <button class="slider-btn prev">&#10094;</button>
           <button class="slider-btn next">&#10095;</button>
+          <div class="slider-dots" id="slider-dots"></div>
         </div>
         <div id="map"></div>
       `;
 
       container.innerHTML = `
         <div class="container">
-          <div class="left">
-            ${sliderHTML}
-          </div>
+          <div class="left">${sliderHTML}</div>
           <div class="right">
             <div class="flip-card" id="flipCard">
               <!-- Ön Yüz -->
@@ -230,12 +277,11 @@
                 <table class="detail-table">
                   <tr><td><strong>Email</strong></td><td>${user?.email || "-"}</td></tr>
                   <tr><td><strong>Firma Adı</strong></td><td>${user?.firma_adi || "-"}</td></tr>
-                  <tr><td><strong>Telefon</strong></td><td>${user?.telefon || "-"}</td></tr>
+                  <tr><td><strong>Telefon</strong></td><td><a href="tel:${user?.telefon}">${user?.telefon || "-"}</a></td></tr>
+                  <tr><td><strong>WhatsApp</strong></td><td><a href="https://wa.me/${user?.telefon?.replace(/\D/g,'')}" target="_blank">Mesaj Gönder</a></td></tr>
                   <tr><td><strong>Kullanıcı Türü</strong></td><td>${user?.kullanici_turu || "-"}</td></tr>
                   <tr><td><strong>Adres</strong></td><td>${user?.adres || "-"}</td></tr>
-                  ${Object.entries(calisanlar).map(([k,v]) => `
-                    <tr><td><strong>${k}</strong></td><td>${v}</td></tr>
-                  `).join('')}
+                  ${Object.entries(calisanlar).map(([k,v]) => `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`).join('')}
                 </table>
                 <button class="toggle-btn" onclick="toggleFlip()">İlan Bilgileri</button>
               </div>
@@ -249,11 +295,23 @@
         </div>
       `;
 
+      // Açıklama Kutusu
       aciklamaKutusu.style.display = "block";
-      aciklamaKutusu.innerHTML = `<strong>Açıklama:</strong><br>${ilan.description || "-"}`;
+      const description = ilan.description || "-";
+      aciklamaKutusu.innerHTML = `<strong>Açıklama:</strong><br><span id="desc-text">${description.length > 200 ? description.slice(0,200) + '...' : description}</span>`;
+      if (description.length > 200) {
+        const btn = document.createElement('span');
+        btn.className = 'show-more';
+        btn.textContent = 'Daha fazla göster';
+        btn.onclick = () => {
+          document.getElementById('desc-text').textContent = description;
+          btn.style.display = 'none';
+        };
+        aciklamaKutusu.appendChild(btn);
+      }
 
       initSlider(images);
-      initMap(ilan.konum);
+      initMap(ilan.konum, ilan.title);
       initMobileTabs();
     }
 
@@ -280,11 +338,51 @@
 
     function initSlider(images) {
       const slider = document.getElementById("slider");
+      const dotsContainer = document.getElementById("slider-dots");
       let currentIndex = 0;
       let autoSlide = setInterval(nextSlide, 5000);
+      // Fullscreen Açma Fonksiyonu
+function openFullscreen(src, isVideo=false) {
+  const modal = document.getElementById("fullscreenModal");
+  const content = document.getElementById("fullscreenContent");
+  content.innerHTML = isVideo
+    ? `<video src="${src}" controls autoplay></video>`
+    : `<img src="${src}" alt="Fullscreen Image">`;
+  modal.classList.remove("hidden");
+}
+
+// Slider içindeki medya elementlerine tıklandığında fullscreen
+document.querySelectorAll("#slider img, #slider video").forEach(el => {
+  el.addEventListener("click", () => {
+    openFullscreen(el.src, el.tagName === "VIDEO");
+  });
+});
+
+// Modal kapatma
+document.getElementById("closeFullscreen").onclick = () => {
+  document.getElementById("fullscreenModal").classList.add("hidden");
+};
+document.getElementById("fullscreenModal").onclick = (e) => {
+  if (e.target.id === "fullscreenModal") {
+    document.getElementById("fullscreenModal").classList.add("hidden");
+  }
+};
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    document.getElementById("fullscreenModal").classList.add("hidden");
+  }
+});
+
+
+      // Dots oluştur
+      dotsContainer.innerHTML = images.map((_, idx) =>
+        `<span data-index="${idx}" class="${idx===0 ? 'active':''}"></span>`).join('');
 
       function updateSlider() {
         slider.style.transform = `translateX(-${currentIndex * 100}%)`;
+        dotsContainer.querySelectorAll('span').forEach((dot, idx) => {
+          dot.classList.toggle('active', idx === currentIndex);
+        });
       }
 
       function nextSlide() {
@@ -304,16 +402,33 @@
 
       document.querySelector(".next").addEventListener("click", () => { nextSlide(); resetAutoSlide(); });
       document.querySelector(".prev").addEventListener("click", () => { prevSlide(); resetAutoSlide(); });
+      dotsContainer.addEventListener("click", e => {
+        if (e.target.dataset.index) {
+          currentIndex = parseInt(e.target.dataset.index);
+          updateSlider();
+          resetAutoSlide();
+        }
+      });
+
+      // Swipe desteği
+      let startX = 0;
+      slider.addEventListener("touchstart", e => startX = e.touches[0].clientX);
+      slider.addEventListener("touchend", e => {
+        const endX = e.changedTouches[0].clientX;
+        if (startX - endX > 50) nextSlide();
+        if (endX - startX > 50) prevSlide();
+        resetAutoSlide();
+      });
     }
 
-    function initMap(location) {
+    function initMap(location, title) {
       if (!location) return;
       const lat = location.lat;
       const lng = location.lng;
 
       const map = L.map('map').setView([lat, lng], 14);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap katkıcıları' }).addTo(map);
-      L.marker([lat, lng]).addTo(map);
+      L.marker([lat, lng]).addTo(map).bindPopup(`<b>${title}</b><br><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">Yol Tarifi Al</a>`).openPopup();
     }
 
     loadIlan();

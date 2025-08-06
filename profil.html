@@ -12,7 +12,64 @@
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background-color: #f4f6f8;
       color: #2c3e50;
+      position: relative;
     }
+
+    /* Arama Kutusu */
+    .search-box {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      z-index: 1000;
+    }
+    .search-input-container {
+      display: flex;
+      gap: 8px;
+    }
+    .search-box input {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+      width: 220px;
+    }
+    .search-box button {
+      padding: 8px 12px;
+      border: none;
+      background: #2c3e50;
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .search-box button:hover {
+      transform: scale(1.05);
+      background: #1a242f;
+    }
+
+    /* Öneri Listesi */
+    .suggestions {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      width: 220px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .suggestions div {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .suggestions div:hover {
+      background: #f0f0f0;
+    }
+
     .profile-header { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
     .email-display { font-size: 26px; font-weight: bold; margin-bottom: 20px; }
     .info-grid { display: flex; flex-wrap: wrap; gap: 20px; }
@@ -20,9 +77,12 @@
     .info-box label { font-weight: 600; display: block; margin-bottom: 6px; }
     .info-box span { display: block; font-size: 16px; background-color: #ecf0f1; padding: 10px; border-radius: 6px; }
     #map { height: 300px; width: 100%; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
     .tabs { display: flex; gap: 10px; margin-bottom: 10px; }
-    .tabs button { flex: 1; padding: 12px; background: #2c3e50; border: none; color: white; font-size: 16px; border-radius: 8px; cursor: pointer; }
-    .tabs button.active { background-color: #2c3e50; }
+    .tabs button { flex: 1; padding: 12px; background: #2c3e50; border: none; color: white; font-size: 16px; border-radius: 8px; cursor: pointer; transition: transform 0.2s ease, background 0.2s ease; }
+    .tabs button:hover { transform: scale(1.05); background-color: #1a242f; }
+    .tabs button.active { background-color: #1a242f; }
+
     .tab-content { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
     .hidden { display: none; }
     .error-message { color: red; font-weight: bold; }
@@ -36,6 +96,15 @@
   </style>
 </head>
 <body>
+
+  <!-- Arama Alanı -->
+  <div class="search-box">
+    <div class="search-input-container">
+      <input type="text" id="searchInput" placeholder="Firma adı veya e-posta...">
+      <button onclick="manualSearch()">Ara</button>
+    </div>
+    <div id="suggestions" class="suggestions" style="display:none;"></div>
+  </div>
 
   <div class="profile-header">
     <div class="email-display" id="email">E-posta: yükleniyor...</div>
@@ -75,22 +144,25 @@
     const { createClient } = supabase;
 
     const supabaseUrl = "https://ofmupldxmqtgddzvbakp.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA"; // kendi key’inle değiştir
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-    // Giriş yapan kullanıcıyı kontrol et
-    async function loadProfile() {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) {
-        window.location.href = "giris.html";
-        return;
+    let mapInstance = null;
+
+    async function loadProfile(userId = null) {
+      if (!userId) {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+          window.location.href = "giris.html";
+          return;
+        }
+        userId = user.id;
       }
 
-      // Kullanıcı bilgilerini getir
       const { data, error } = await supabaseClient
         .from('kullanicilar')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
 
       if (error || !data) {
@@ -98,6 +170,7 @@
         return;
       }
 
+      // Profil Bilgisi
       document.getElementById('email').textContent = `E-posta: ${data.email || "-"}`;
       document.getElementById('phone').textContent = data.telefon || "-";
       document.getElementById('adres').textContent = data.adres || "-";
@@ -112,24 +185,25 @@
         <div class="staff-box">Personel: ${calisanlar.personel || "Bilgi yok"}</div>
       `;
 
-      // Adres sekmesi
+      // Adres / İletişim
       document.getElementById('adresTab').textContent = data.adres || "Adres bilgisi yok";
-      // İletişim sekmesi
-      document.getElementById('iletisim').textContent = data.telefon
-        ? `Telefon: ${data.telefon}` : "İletişim bilgisi yok";
+      document.getElementById('iletisim').textContent = data.telefon ? `Telefon: ${data.telefon}` : "İletişim bilgisi yok";
 
       // Harita
-      if (data.lat && data.lon) {
-        const map = L.map('map').setView([data.lat, data.lon], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        L.marker([data.lat, data.lon]).addTo(map)
+      if (data.konum && data.konum.lat && data.konum.lng) {
+        if (!mapInstance) {
+          mapInstance = L.map('map').setView([data.konum.lat, data.konum.lng], 13);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
+        } else {
+          mapInstance.setView([data.konum.lat, data.konum.lng], 13);
+        }
+        L.marker([data.konum.lat, data.konum.lng]).addTo(mapInstance)
           .bindPopup(`${data.firma_adi || "Firma"} Konumu`).openPopup();
       }
 
-      loadUserListings(user.id);
+      loadUserListings(userId);
     }
 
-    // Kullanıcının ilanları (Yeni sütun yapısına göre)
     async function loadUserListings(userId) {
       const ilanlarDiv = document.getElementById('ilanlar');
       ilanlarDiv.textContent = "Yükleniyor...";
@@ -141,12 +215,11 @@
         .eq('onay_durumu', 'onaylandi');
 
       if (!data || data.length === 0) {
-        ilanlarDiv.textContent = "Henüz onaylanmış ilanınız yok.";
+        ilanlarDiv.textContent = "Henüz onaylanmış ilan yok.";
         return;
       }
 
       ilanlarDiv.innerHTML = data.map(ilan => {
-        // Resimler JSON parse
         let resimler = ilan.resimler || [];
         if (typeof resimler === "string") {
           try { resimler = JSON.parse(resimler); } catch (e) { resimler = []; }
@@ -158,14 +231,14 @@
             <img src="${ilkResim}" alt="İlan Resmi">
             <div class="ilan-info">
               <h4>${ilan.title || "Başlık Yok"}</h4>
-              <p>${ilan.price ? ilan.price + " ₺" : "Fiyat Yok"}</p>
+              <p>${ilan.fiyat ? ilan.fiyat + " ₺" : "Fiyat Yok"}</p>
             </div>
           </div>
         `;
       }).join('');
     }
 
-    // Sekme geçişleri
+    // Sekme Geçişi
     window.showTab = function(tabId, event) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.querySelectorAll('.tabs button').forEach(btn => btn.classList.remove('active'));
@@ -173,7 +246,62 @@
       event.target.classList.add('active');
     }
 
-    loadProfile();
+    // Yazdıkça öneriler
+    document.getElementById('searchInput').addEventListener('input', async (e) => {
+      const val = e.target.value.trim();
+      const suggestionsDiv = document.getElementById('suggestions');
+
+      if (!val) {
+        suggestionsDiv.style.display = "none";
+        return;
+      }
+
+      const { data, error } = await supabaseClient
+        .from('kullanicilar')
+        .select('id, email, firma_adi')
+        .or(`email.ilike.%${val}%,firma_adi.ilike.%${val}%`)
+        .limit(5);
+
+      if (error || !data || data.length === 0) {
+        suggestionsDiv.style.display = "none";
+        return;
+      }
+
+      suggestionsDiv.innerHTML = data.map(user => `
+        <div onclick="selectSuggestion('${user.id}')">
+          ${user.firma_adi || user.email}
+        </div>
+      `).join('');
+      suggestionsDiv.style.display = "block";
+    });
+
+    // Öneriye tıklayınca
+    window.selectSuggestion = function(userId) {
+      document.getElementById('suggestions').style.display = "none";
+      document.getElementById('searchInput').value = "";
+      loadProfile(userId);
+    }
+
+    // Manuel arama (buton)
+    async function manualSearch() {
+      const query = document.getElementById('searchInput').value.trim();
+      if (!query) return;
+
+      const { data, error } = await supabaseClient
+        .from('kullanicilar')
+        .select('id')
+        .or(`email.eq.${query},firma_adi.eq.${query}`)
+        .single();
+
+      if (error || !data) {
+        alert("Kullanıcı bulunamadı");
+        return;
+      }
+
+      loadProfile(data.id);
+    }
+
+    loadProfile(); // Sayfa açılınca kendi profilini yükle
   </script>
 </body>
 </html>

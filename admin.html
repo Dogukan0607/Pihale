@@ -5,23 +5,134 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Paneli</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
     h2 { color: #2c3e50; margin-top: 0; }
     .nav { display: flex; gap: 10px; padding: 20px; justify-content: center; flex-wrap: wrap; }
-    .nav button { padding: 14px 24px; background-color: #3498db; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; }
-    .nav button:hover { background-color: #2980b9; }
-    .section { display: none; padding: 20px; background: white; border-radius: 10px; margin: 10px auto; max-width: 900px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    input, select { width: 100%; margin: 10px 0; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
-    button[type="submit"] { background-color: #2ecc71; color: white; border: none; font-size: 16px; padding: 10px 20px; border-radius: 6px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
+    .nav button {
+      padding: 14px 24px; background-color: #3498db; color: white; border: none;
+      border-radius: 10px; cursor: pointer; font-size: 16px; transition: all 0.2s ease;
+    }
+    .nav button:hover {
+      background-color: #2980b9;
+      transform: scale(1.05);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .nav button.active { background-color: #1abc9c; }
+
+    .section {
+      display: none; padding: 20px; background: white; border-radius: 10px;
+      margin: 10px auto; max-width: 900px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input, select {
+      width: 100%; margin: 10px 0; padding: 10px; border-radius: 6px;
+      border: 1px solid #ccc; font-size: 14px;
+    }
+    button[type="submit"] {
+      background-color: #2ecc71; color: white; border: none; font-size: 16px;
+      padding: 10px 20px; border-radius: 6px; cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    button[type="submit"]:hover {
+      transform: scale(1.03);
+      background-color: #27ae60;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 8px; border: 1px solid #ccc; text-align: left; font-size: 14px; }
     th { background: #2980b9; color: white; }
-    #ilanOnayListesi div { background:white; margin-bottom:10px; padding:10px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1) }
-    #detayMap { width:100%; height:250px; margin-top:10px; border-radius:6px; }
+
+    /* Arama kutusu */
+    .search-box {
+      margin-bottom: 15px;
+      display: flex;
+      gap: 10px;
+    }
+    .search-box input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    #ilanOnayListesi div {
+      background:white; margin-bottom:10px; padding:10px; border-radius:8px;
+      box-shadow:0 2px 5px rgba(0,0,0,0.1)
+    }
+    #ilanOnayListesi img { width:100%;max-height:150px;object-fit:cover;border-radius:6px; }
+    #ilanOnayListesi button {
+      margin:5px 5px 0 0; padding:8px 14px; border:none; border-radius:6px; cursor:pointer;
+      transition: all 0.2s ease;
+    }
+    #ilanOnayListesi button:hover { transform: scale(1.05); }
+    #ilanOnayListesi button:first-child { background:#27ae60; color:white; }
+    #ilanOnayListesi button:last-child { background:#e74c3c; color:white; }
+
+    /* Harita */
+    #map {
+      height: 250px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .location-btn {
+      background:#f39c12; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;
+      margin-bottom: 10px;
+      transition: all 0.2s ease;
+    }
+    .location-btn:hover { transform: scale(1.03); background:#e67e22; }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      width: 320px;
+      text-align: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .modal-content input {
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .modal-content button {
+      background-color: #3498db;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      width: 100%;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .modal-content button:hover { background-color: #2980b9; }
   </style>
 </head>
 <body>
+
+<!-- Kart Bilgisi Modalı -->
+<div class="modal" id="paymentModal">
+  <div class="modal-content">
+    <h3>Kart Bilgilerini Gir</h3>
+    <input type="text" id="cardNumber" placeholder="Kart Numarası (16 haneli)">
+    <input type="text" id="expireDate" placeholder="Son Kullanma (AA/YY)">
+    <input type="text" id="cvc" placeholder="CVC">
+    <button onclick="startPayment()">Ödemeyi Başlat</button>
+  </div>
+</div>
 
 <div class="nav">
   <button onclick="showSection('uyeEkle')">Üye Ekle</button>
@@ -43,10 +154,16 @@
     </select>
     <input type="text" id="telefon" placeholder="Telefon" required>
     <input type="text" id="adres" placeholder="Adres" required>
+
     <label>Şirket Çalışanları:</label>
     <input type="text" id="mudur" placeholder="Müdür Adı">
     <input type="text" id="mudurYardimcisi" placeholder="Müdür Yardımcısı Adı">
     <input type="text" id="personel" placeholder="Personel Adı">
+
+    <!-- Harita -->
+    <button type="button" class="location-btn" onclick="setCurrentLocation()">Mevcut Konumumu Kullan</button>
+    <div id="map"></div>
+
     <button type="submit">Üye Ekle</button>
   </form>
 </div>
@@ -54,6 +171,9 @@
 <!-- Üye Listesi -->
 <div id="uye-listesi" class="section">
   <h2>Kayıtlı Üyeler</h2>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="E-posta veya Firma Adı ile ara..." oninput="filterMembers()">
+  </div>
   <table>
     <thead>
       <tr>
@@ -61,7 +181,7 @@
         <th>Firma Adı</th>
         <th>Kullanıcı Türü</th>
         <th>Telefon</th>
-        <th>Abonelik</th>
+        <th>Ödeme</th>
         <th>Kayıt Tarihi</th>
       </tr>
     </thead>
@@ -83,28 +203,78 @@ const supabaseUrl = "https://ofmupldxmqtgddzvbakp.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA";
 const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
+let membersData = [];
+let selectedLat = 39.92077;
+let selectedLng = 32.85411;
+
+// FORM INPUT REFERANSLARI
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const firmaAdiInput = document.getElementById("firmaAdi");
+const kullaniciTuruInput = document.getElementById("kullaniciTuru");
+const telefonInput = document.getElementById("telefon");
+const adresInput = document.getElementById("adres");
+const mudurInput = document.getElementById("mudur");
+const mudurYardimcisiInput = document.getElementById("mudurYardimcisi");
+const personelInput = document.getElementById("personel");
+
+/* Sekme Geçişi */
 function showSection(id) {
   document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+  document.querySelectorAll('.nav button').forEach(btn => btn.classList.remove('active'));
   document.getElementById(id).style.display = 'block';
+  document.querySelector(`.nav button[onclick*="${id}"]`)?.classList.add('active');
+}
+
+/* Harita Başlat */
+let map, marker;
+function initMap() {
+  map = L.map('map').setView([selectedLat, selectedLng], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(map);
+
+  marker = L.marker([selectedLat, selectedLng], {draggable: true}).addTo(map);
+  marker.on('dragend', function(e) {
+    const pos = marker.getLatLng();
+    selectedLat = pos.lat;
+    selectedLng = pos.lng;
+  });
+}
+
+/* Mevcut Konum */
+function setCurrentLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      map.setView([lat, lng], 14);
+      marker.setLatLng([lat, lng]);
+      selectedLat = lat;
+      selectedLng = lng;
+    });
+  } else {
+    alert("Konum desteği bulunamadı.");
+  }
 }
 
 /* Üye Ekle */
 document.getElementById("uyeForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-  const firmaAdi = document.getElementById("firmaAdi").value.trim();
-  const kullaniciTuru = document.getElementById("kullaniciTuru").value;
-  const telefon = document.getElementById("telefon").value.trim();
-  const adres = document.getElementById("adres").value.trim();
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+  const firmaAdi = firmaAdiInput.value.trim();
+  const kullaniciTuru = kullaniciTuruInput.value;
+  const telefon = telefonInput.value.trim();
+  const adres = adresInput.value.trim();
   const calisanlar = {
-    mudur: document.getElementById("mudur").value.trim(),
-    mudurYardimcisi: document.getElementById("mudurYardimcisi").value.trim(),
-    personel: document.getElementById("personel").value.trim()
+    mudur: mudurInput.value.trim(),
+    mudurYardimcisi: mudurYardimcisiInput.value.trim(),
+    personel: personelInput.value.trim()
   };
 
-  // 1. Auth kaydı (trigger otomatik ekler: id + email + created_at)
+  // Auth kaydı
   const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({
     email: email,
     password: password
@@ -115,8 +285,13 @@ document.getElementById("uyeForm").addEventListener("submit", async (e) => {
     return;
   }
 
-  // 2. Ek alanları update et
-  const userId = signUpData.user.id;
+  const userId = signUpData.user?.id;
+  if (!userId) {
+    alert("Kullanıcı ID alınamadı.");
+    return;
+  }
+
+  // Ek bilgileri güncelle
   const { error: updateError } = await supabaseClient
     .from('kullanicilar')
     .update({
@@ -125,7 +300,8 @@ document.getElementById("uyeForm").addEventListener("submit", async (e) => {
       telefon: telefon,
       adres: adres,
       calisanlar: calisanlar,
-      subscription_status: 'active'
+      konum: { lat: selectedLat, lng: selectedLng },
+      subscription_status: 'pending'
     })
     .eq('id', userId);
 
@@ -134,11 +310,55 @@ document.getElementById("uyeForm").addEventListener("submit", async (e) => {
     return;
   }
 
-  alert("Kullanıcı başarıyla eklendi ve bilgileri güncellendi.");
-  document.getElementById("uyeForm").reset();
+  // Kart modalını aç
+  document.getElementById("paymentModal").style.display = "flex";
 });
 
-/* Üye Listesi */
+/*startPayment fonksiyonu */
+async function startPayment() {
+  const cardNumber = document.getElementById("cardNumber").value.trim();
+  const expireDate = document.getElementById("expireDate").value.trim();
+  const cvc = document.getElementById("cvc").value.trim();
+
+  if (!cardNumber || !expireDate || !cvc) {
+    alert("Lütfen tüm kart bilgilerini doldurun.");
+    return;
+  }
+
+  try {
+    // Backend'e kart bilgilerini gönder
+    const response = await fetch('/api/create-subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cardNumber,
+        expireDate,
+        cvc,
+        amount: 850 // TL
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      alert("Ödeme başarıyla tamamlandı!");
+
+      // Supabase'te abonelik durumunu güncelle
+      await supabaseClient
+        .from('kullanicilar')
+        .update({ subscription_status: 'active' })
+        .eq('email', emailInput.value.trim());
+
+      document.getElementById("paymentModal").style.display = "none";
+    } else {
+      alert("Ödeme başarısız: " + result.message);
+    }
+  } catch (err) {
+    alert("Ödeme hatası: " + err.message);
+  }
+}
+
+/* Üye Listesi Yükleme */
 async function loadMembers() {
   showSection('uye-listesi');
   const tbody = document.getElementById("uyeListesiBody");
@@ -150,6 +370,13 @@ async function loadMembers() {
     return;
   }
 
+  membersData = data || [];
+  renderMemberTable(membersData);
+}
+
+/* Üye Tablosunu Göster */
+function renderMemberTable(data) {
+  const tbody = document.getElementById("uyeListesiBody");
   if (!data || data.length === 0) {
     tbody.innerHTML = "<tr><td colspan='6'>Kayıtlı üye yok</td></tr>";
     return;
@@ -158,17 +385,26 @@ async function loadMembers() {
   tbody.innerHTML = "";
   data.forEach(user => {
     const date = user.created_at ? new Date(user.created_at).toLocaleDateString("tr-TR") : "-";
-    const row = `
+    tbody.innerHTML += `
       <tr>
         <td>${user.email}</td>
         <td>${user.firma_adi || '-'}</td>
         <td>${user.kullanici_turu || '-'}</td>
         <td>${user.telefon || '-'}</td>
-        <td>${user.subscription_status || '-'}</td>
+        <td>${user.payment_method || '-'}</td>
         <td>${date}</td>
       </tr>`;
-    tbody.innerHTML += row;
   });
+}
+
+/* Filtreleme */
+function filterMembers() {
+  const keyword = document.getElementById("searchInput").value.toLowerCase();
+  const filtered = membersData.filter(user =>
+    (user.email && user.email.toLowerCase().includes(keyword)) ||
+    (user.firma_adi && user.firma_adi.toLowerCase().includes(keyword))
+  );
+  renderMemberTable(filtered);
 }
 
 /* Onay Bekleyen İlanlar */
@@ -194,34 +430,29 @@ async function loadPendingListings() {
 
   div.innerHTML = "";
   data.forEach(ilan => {
-    // Resimler JSON parse
     let resimler = ilan.resimler || [];
     if (typeof resimler === "string") {
-      try { resimler = JSON.parse(resimler); } catch (e) { resimler = []; }
+      try { resimler = JSON.parse(resimler); } catch { resimler = []; }
     }
-    const firstImage = resimler.length > 0 ? resimler[0] : 'https://via.placeholder.com/150';
+    const firstImage = resimler[0] || 'https://via.placeholder.com/150';
 
-    // Detaylar JSON parse
-    let detaylar = ilan.detaylar || {};
-    if (typeof detaylar === "string") {
-      try { detaylar = JSON.parse(detaylar); } catch (e) { detaylar = {}; }
-    }
-
-    const oda = detaylar.oda_sayisi || detaylar.odaSayisi || "-";
-    const m2Brut = detaylar.m2_brut || detaylar.m2Brut || "-";
+    const detaylar = typeof ilan.detaylar === "string"
+      ? JSON.parse(ilan.detaylar)
+      : (ilan.detaylar || {});
+    const oda = detaylar.oda_sayisi || "-";
+    const m2Brut = detaylar.m2_brut || "-";
     const kat = detaylar.kat || "-";
 
     div.innerHTML += `
       <div>
-        <img src="${firstImage}" style="width:100%;max-height:150px;object-fit:cover;border-radius:6px;">
+        <img src="${firstImage}">
         <h3>${ilan.title || 'Başlık Yok'} <small>(${ilan.ilan_turu || '-'})</small></h3>
         <p><strong>Fiyat:</strong> ${ilan.price ? ilan.price + " TL" : "-"} </p>
         <p><strong>Detay:</strong> ${m2Brut} m² • ${oda} • Kat: ${kat}</p>
         <p><strong>İl/İlçe:</strong> ${ilan.il || '-'} / ${ilan.ilce || '-'}</p>
         <button onclick="approveListing('${ilan.id}')">Onayla</button>
         <button onclick="rejectListing('${ilan.id}')">Reddet</button>
-      </div>
-    `;
+      </div>`;
   });
 }
 
@@ -234,6 +465,9 @@ async function rejectListing(id) {
   await supabaseClient.from('ilanlar').update({ onay_durumu: 'reddedildi' }).eq('id', id);
   loadPendingListings();
 }
+
+/* Haritayı Başlat */
+window.onload = initMap;
 </script>
 </body>
 </html>
