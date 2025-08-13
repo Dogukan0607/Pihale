@@ -504,6 +504,47 @@ function createDetayAlanlari(tur) {
 
 /* Sayfa yüklenince kontrol */
 checkAuth();
+</script>  
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const supabase = createClient('https://ofmupldxmqtgddzvbakp.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA');
+
+// İyzico ödeme linkin
+const paymentLink = "https://iyzi.link/AKNyxA";
+
+async function girisKontrolu() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    window.location.href = "giris.html"; 
+    return;
+  }
+
+  // Kullanıcının kayıt tarihi ve ödeme durumunu çek
+  const { data, error } = await supabase
+    .from('kullanicilar')
+    .select('created_at, subscription_status')
+    .eq('id', user.id)
+    .single();
+
+  if (error) {
+    console.error('Veri alınamadı:', error.message);
+    return;
+  }
+
+  const kayitTarihi = new Date(data.created_at);
+  const bugun = new Date();
+  const farkGun = Math.floor((bugun - kayitTarihi) / (1000 * 60 * 60 * 24));
+
+  // 30 günü geçtiyse ve subscription_status aktif değilse
+  if (farkGun >= 30 && data.subscription_status !== 'active') {
+    window.location.href = paymentLink;
+  }
+}
+
+girisKontrolu();
 </script>
+
 </body>
 </html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hakkımızda - Pihale</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet">
+<style>
+    body {
+        margin: 0;
+        font-family: 'Montserrat', sans-serif;
+        background: #f5f6fa;
+        color: #2c3e50;
+        overflow-x: hidden;
+    }
+    header {
+        height: 80vh;
+        background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)),
+        url('https://images.unsplash.com/photo-1523217582562-09d0def993a6') center/cover no-repeat;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-align: center;
+        animation: fadeIn 2s ease-in;
+    }
+    header h1 {
+        font-size: 3.2rem;
+        text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    section {
+        max-width: 1100px;
+        margin: auto;
+        padding: 60px 20px;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+        margin-top: -80px;
+        position: relative;
+        z-index: 2;
+    }
+    section h2 {
+        font-size: 2rem;
+        color: #2980b9;
+        margin-bottom: 20px;
+        position: relative;
+    }
+    section h2::after {
+        content: '';
+        display: block;
+        width: 60px;
+        height: 4px;
+        background: #2980b9;
+        margin-top: 6px;
+        border-radius: 2px;
+    }
+    section p, section ul {
+        line-height: 1.8;
+        margin-bottom: 20px;
+    }
+    ul {
+        padding-left: 20px;
+    }
+    .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 25px;
+        margin-top: 40px;
+    }
+    .feature-box {
+        background: linear-gradient(135deg, #eaf6ff, #f0f3f5);
+        padding: 25px;
+        text-align: center;
+        border-radius: 15px;
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.07);
+    }
+    .feature-box:hover {
+        transform: translateY(-12px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+    }
+    .feature-box img {
+        width: 64px;
+        margin-bottom: 15px;
+    }
+    .slogan {
+        background: linear-gradient(to right, #3498db, #2ecc71);
+        color: white;
+        padding: 50px 20px;
+        text-align: center;
+        font-size: 1.5rem;
+        margin-top: 60px;
+        border-radius: 12px;
+        animation: bounce 2.5s infinite;
+    }
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+    }
+    @media(max-width:768px) {
+        header h1 { font-size: 2.2rem; padding: 0 10px; }
+        .slogan { font-size: 1.2rem; }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <h1 data-aos="fade-down">Pihale - Dijital Teklif Platformu</h1>
+</header>
+
+<section data-aos="fade-up">
+    <h2>Gayrimenkulde Dijital Dönüşüm</h2>
+    <p>Gayrimenkul sektörü, sürekli gelişen dijital dünyada halen geleneksel ilan anlayışına sıkışmış durumdadır. Sabit fiyatlı ilanlar, gerçek piyasa değerini yansıtmakta yetersiz kalmakta, alıcı ve satıcıyı ortak bir zeminde buluşturamamaktadır.</p>
+    <p><strong>Pihale</strong>, bu soruna çözüm üretmek amacıyla geliştirilmiş; emlakçılar, yatırımcılar, bireysel alıcı ve satıcıları dinamik, rekabetçi ve güvenli bir sistemde buluşturan dijital bir teklif platformudur.</p>
+
+    <h2>Misyonumuz</h2>
+    <ul>
+        <li>Zamanı verimli kullanan,</li>
+        <li>Teklif esaslı fiyatlandırmayı esas alan,</li>
+        <li>Aracıların ve yatırım danışmanlarının haklarını koruyan,</li>
+        <li>Alıcı ve satıcıyı şeffaf, güvenilir ve hızlı bir şekilde buluşturan bir platform oluşturmak.</li>
+    </ul>
+
+    <h2>Vizyonumuz</h2>
+    <ul>
+        <li>Yapay zekâ destekli analizlerle doğru fiyat,</li>
+        <li>PropTech çözümleriyle veriye dayalı yatırım,</li>
+        <li>Güçlü altyapısı ve kullanıcı dostu arayüzüyle sürdürülebilir dijital dönüşüm sağlamak.</li>
+    </ul>
+
+    <p>Hedefimiz, sadece bir ilan platformu olmak değil; sektördeki fiyat belirleme anlayışını yeniden tanımlamak ve gayrimenkulde dijital rekabetin adresi haline gelmektir.</p>
+
+    <div class="features">
+        <div class="feature-box" data-aos="zoom-in">
+            <img src="https://cdn-icons-png.flaticon.com/512/2910/2910791.png" alt="Fiyat Analizi">
+            <h3>Doğru Fiyat Analizi</h3>
+            <p>Yapay zeka destekli analizlerle piyasa değerine uygunluk.</p>
+        </div>
+        <div class="feature-box" data-aos="zoom-in" data-aos-delay="100">
+            <img src="https://cdn-icons-png.flaticon.com/512/2107/2107957.png" alt="Güvenli Ticaret">
+            <h3>Güvenli Ticaret</h3>
+            <p>Doğrulanmış kullanıcılarla güvenli işlemler.</p>
+        </div>
+        <div class="feature-box" data-aos="zoom-in" data-aos-delay="200">
+            <img src="https://cdn-icons-png.flaticon.com/512/3500/3500833.png" alt="Hızlı Yayın">
+            <h3>Hızlı Yayın</h3>
+            <p>Teklif esaslı sistem ile anlık yayın imkânı.</p>
+        </div>
+    </div>
+
+    <div class="slogan" data-aos="fade-up">
+        “Her arz, kendi talebini yaratır.” <br>
+        <small>(Klasik tek fiyat değil, teklif ile oluşan değer.)</small>
+    </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+<script>AOS.init({ duration: 1000 });</script>
+</body>
+</html>

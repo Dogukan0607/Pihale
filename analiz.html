@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>İlan Analizleri</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background-color: #f4f6f8;
+    }
+    .header {
+      text-align: center;
+      padding: 40px 20px 20px;
+      font-size: 28px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    .ilan-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+    .ilan-kart {
+      background-color: #3498db;
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .ilan-kart:hover {
+      transform: scale(1.03);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    .grafik-container {
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      display: none;
+    }
+    canvas {
+      width: 100% !important;
+      max-height: 400px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">İlan Analizlerim</div>
+  <div class="ilan-grid" id="ilanlar"></div>
+  <div class="grafik-container" id="grafikAlani">
+    <h3 id="grafikBaslik">İlan Başlığı</h3>
+    <canvas id="fiyatGrafik"></canvas>
+  </div>
+
+  <script>
+    const supabaseUrl = "https://YOUR_PROJECT_ID.supabase.co";
+    const supabaseKey = "YOUR_PUBLIC_ANON_KEY";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    const grid = document.getElementById("ilanlar");
+    const grafikAlani = document.getElementById("grafikAlani");
+    const grafikBaslik = document.getElementById("grafikBaslik");
+    const ctx = document.getElementById("fiyatGrafik").getContext("2d");
+    let chart;
+
+    async function kullaniciIdAl() {
+      const {
+        data: { session },
+        error
+      } = await supabaseClient.auth.getSession();
+      return session?.user?.id || null;
+    }
+
+    async function ilanlariYukle() {
+      const userId = await kullaniciIdAl();
+      if (!userId) {
+        alert("Giriş yapmanız gerekiyor.");
+        return;
+      }
+      const { data, error } = await supabaseClient
+        .from("ilanlar")
+        .select("id, title, price, created_at")
+        .eq("user_id", userId);
+
+      if (error) {
+        console.error("İlan verisi alınamadı", error);
+        return;
+      }
+
+      const grupluIlanlar = {};
+      data.forEach(item => {
+        if (!grupluIlanlar[item.id]) grupluIlanlar[item.id] = { baslik: item.title, fiyatlar: [], tarih: [] };
+        grupluIlanlar[item.id].fiyatlar.push(item.price);
+        grupluIlanlar[item.id].tarih.push(new Date(item.created_at).toLocaleDateString());
+      });
+
+      Object.keys(grupluIlanlar).forEach(id => {
+        const ilan = grupluIlanlar[id];
+        const div = document.createElement("div");
+        div.className = "ilan-kart";
+        div.innerHTML = `<i class='fas fa-chart-line'></i> ${ilan.baslik}`;
+        div.onclick = () => gosterGrafik(ilan);
+        grid.appendChild(div);
+      });
+    }
+
+    function gosterGrafik(ilan) {
+      grafikBaslik.textContent = ilan.baslik + " - Fiyat Değişimi";
+      grafikAlani.style.display = "block";
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ilan.tarih,
+          datasets: [{
+            label: 'Fiyat (TL)',
+            data: ilan.fiyatlar,
+            backgroundColor: 'rgba(41, 128, 185, 0.2)',
+            borderColor: 'rgba(41, 128, 185, 1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true },
+            tooltip: { mode: 'index', intersect: false }
+          },
+          interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: false
+          },
+          scales: {
+            y: { beginAtZero: false }
+          }
+        }
+      });
+    }
+
+    ilanlariYukle();
+  </script>
+</body>
+</html>

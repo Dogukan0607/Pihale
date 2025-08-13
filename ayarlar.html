@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ayarlar</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      color: #2c3e50;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    .menu {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 30px;
+      justify-content: center;
+    }
+    .menu button {
+      padding: 14px 20px;
+      border: none;
+      border-radius: 10px;
+      background-color: #34495e;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .menu button:hover,
+    .menu button.active {
+      background-color: #2c3e50;
+      transform: scale(1.05);
+    }
+    .section {
+      display: none;
+      padding: 30px;
+      background-color: white;
+      border-radius: 14px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.07);
+      animation: fadeIn 0.6s ease-in-out;
+    }
+    .section.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0 20px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+    }
+    .btn-save {
+      background: #27ae60;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: background 0.3s ease;
+    }
+    .btn-save:hover {
+      background: #1e8449;
+    }
+    .section-bg {
+      background: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c') center/cover no-repeat;
+      border-radius: 14px;
+      padding: 60px 30px;
+      color: white;
+    }
+    .section-bg h3 {
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="menu">
+    <button onclick="showSection('sifre')" class="active">Şifre Değiştir</button>
+    <button onclick="showSection('telefon')">Telefon Güncelle</button>
+    <button onclick="showSection('konum')">Harita Konumu</button>
+    <button onclick="showSection('email')">E-Posta Güncelle</button>
+    <button onclick="showSection('iletisim')">İletişim</button>
+    <button onclick="showSection('sikayet')">Şikayet</button>
+  </div>
+
+  <div id="sifre" class="section active" data-aos="fade-up">
+    <h3><i class="fas fa-lock"></i> Şifre Değiştir</h3>
+    <label>Mevcut Şifre</label>
+    <input type="password" id="currentPassword">
+    <label>Yeni Şifre</label>
+    <input type="password" id="newPassword">
+    <button class="btn-save" onclick="updatePassword()">Şifreyi Güncelle</button>
+  </div>
+
+  <div id="telefon" class="section" data-aos="fade-up">
+    <h3><i class="fas fa-phone"></i> Telefon Güncelle</h3>
+    <label>Telefon</label>
+    <input type="text" id="newPhone">
+    <button class="btn-save" onclick="updatePhone()">Kaydet</button>
+  </div>
+
+  <div id="konum" class="section section-bg" data-aos="fade-up">
+    <h3><i class="fas fa-map-marker-alt"></i> Harita Konumu</h3>
+    <p>Buraya interaktif harita entegre edilecektir.</p>
+  </div>
+
+  <div id="email" class="section" data-aos="fade-up">
+    <h3><i class="fas fa-envelope"></i> E-Posta Güncelle</h3>
+    <label>Yeni E-Posta</label>
+    <input type="email" id="newEmail">
+    <button class="btn-save" onclick="updateEmail()">E-Postayı Güncelle</button>
+  </div>
+
+  <div id="iletisim" class="section" data-aos="fade-up">
+    <h3><i class="fas fa-comment-dots"></i> İletişim</h3>
+    <label>Mesajınız</label>
+    <textarea rows="5"></textarea>
+    <button class="btn-save">Gönder</button>
+  </div>
+
+  <div id="sikayet" class="section" data-aos="fade-up">
+    <h3><i class="fas fa-exclamation-triangle"></i> Şikayet</h3>
+    <label>Şikayetiniz</label>
+    <textarea rows="5"></textarea>
+    <button class="btn-save">Gönder</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+<script>AOS.init();</script>
+<script>
+  const supabase = supabase.createClient("https://ofmupldxmqtgddzvbakp.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA");
+
+  function showSection(id) {
+    document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+    document.querySelectorAll('.menu button').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  async function updatePassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const email = session?.user?.email;
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+    if (signInError) return alert("Mevcut şifre yanlış.");
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    alert(error ? 'Hata: ' + error.message : 'Şifre başarıyla güncellendi.');
+  }
+
+  async function updateEmail() {
+    const newEmail = document.getElementById('newEmail').value;
+    const { error } = await supabase.auth.updateUser({ email: newEmail });
+    alert(error ? 'Hata: ' + error.message : 'E-posta güncellendi.');
+  }
+
+  async function updatePhone() {
+    const newPhone = document.getElementById('newPhone').value;
+    const user = await supabase.auth.getUser();
+    const userId = user.data.user.id;
+    const { error } = await supabase.from('kullanicilar').update({ telefon: newPhone }).eq('id', userId);
+    alert(error ? 'Hata: ' + error.message : 'Telefon güncellendi.');
+  }
+</script>
+
+</body>
+</html>

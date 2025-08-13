@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hızlı İhale</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f5f7fa; color: #2c3e50; }
+    header { background: linear-gradient(to right, #3498db, #2ecc71); padding: 50px 20px; color: white; text-align: center; }
+    header h1 { margin: 0; font-size: 36px; }
+    .ihale-container { max-width: 1000px; margin: 40px auto; background: white; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); padding: 30px; }
+    .info-row { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }
+    .info-box { flex: 1 1 300px; background: #ecf0f1; padding: 20px; border-radius: 8px; text-align: center; }
+    .info-box h2 { margin: 0; font-size: 22px; color: #34495e; }
+    .info-box p { margin-top: 10px; font-size: 20px; font-weight: bold; }
+    .slider { width: 100%; height: 400px; overflow: hidden; position: relative; border-radius: 10px; margin-bottom: 30px; }
+    .slider img { width: 100%; height: 100%; object-fit: cover; }
+    .bid-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; }
+    .bid-form input { padding: 12px; border: 1px solid #ccc; border-radius: 6px; }
+    .bid-form button { background: #27ae60; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 16px; cursor: pointer; }
+    .bid-form button:disabled { background-color: gray; cursor: not-allowed; }
+    .bidders { display: flex; flex-wrap: wrap; gap: 20px; }
+    .bid-card { flex: 1 1 250px; background-color: #ecf0f1; border-radius: 10px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    .bid-card h4 { margin: 0; font-size: 16px; color: #2c3e50; }
+    .bid-card p { margin: 6px 0; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header data-aos="fade-down">
+    <h1>Hızlı İhale</h1>
+    <p>Sınırlı süreli teklif ile en yüksek veren kazanır!</p>
+  </header>
+
+  <div class="ihale-container" data-aos="fade-up">
+    <div class="slider">
+      <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c" alt="İhale Ürünü">
+    </div>
+
+    <div class="info-row">
+      <div class="info-box">
+        <h2>Açılış Fiyatı</h2>
+        <p id="acilisFiyat">₺ -</p>
+      </div>
+      <div class="info-box">
+        <h2>Mevcut Fiyat</h2>
+        <p id="mevcutFiyat">₺ -</p>
+      </div>
+      <div class="info-box">
+        <h2>Kalan Süre</h2>
+        <p id="timer">--:--:--</p>
+      </div>
+    </div>
+
+    <form class="bid-form" id="bidForm">
+      <input type="text" id="firma" placeholder="Firma Adı" required />
+      <input type="text" id="mudur" placeholder="Müdür Adı" required />
+      <input type="text" id="telefon" placeholder="Telefon" required />
+      <input type="number" id="teklif" placeholder="Teklif Tutarı (₺)" required />
+      <button type="submit">Teklif Ver</button>
+    </form>
+
+    <div class="bidders" id="bidders"></div>
+  </div>
+
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+  <script>
+    AOS.init();
+
+    const supabase = supabase.createClient("https://ofmupldxmqtgddzvbakp.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mbXVwbGR4bXF0Z2RkenZiYWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MzU5OTksImV4cCI6MjA2OTIxMTk5OX0.TrMgsB37M12xT84UIvkIAzG285SpaKUjDAXn5GBMFsA");
+    let ihale = null;
+
+    async function baslat() {
+      const { data, error } = await supabase.from('hizli_ihale').select('*').order('baslangic', { ascending: false }).limit(1).single();
+      if (error || !data) return;
+      ihale = data;
+      document.getElementById('acilisFiyat').textContent = `₺ ${ihale.acilis_fiyat}`;
+      document.getElementById('mevcutFiyat').textContent = `₺ ${ihale.mevcut_fiyat}`;
+
+      const bitisZamani = new Date(ihale.baslangic).getTime() + (ihale.sure_dk * 60 * 1000);
+      const timer = document.getElementById("timer");
+      const form = document.getElementById("bidForm");
+
+      const sayac = setInterval(() => {
+        const simdi = new Date().getTime();
+        const kalan = bitisZamani - simdi;
+        if (kalan <= 0) {
+          clearInterval(sayac);
+          timer.textContent = "00:00:00";
+          form.querySelector('button').disabled = true;
+          return;
+        }
+        const saat = String(Math.floor(kalan / (1000 * 60 * 60))).padStart(2, '0');
+        const dakika = String(Math.floor((kalan % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+        const saniye = String(Math.floor((kalan % (1000 * 60)) / 1000)).padStart(2, '0');
+        timer.textContent = `${saat}:${dakika}:${saniye}`;
+      }, 1000);
+
+      yukleTeklifler();
+    }
+
+    async function yukleTeklifler() {
+      const { data, error } = await supabase.from('ihale_teklifler').select('*').eq('ihale_id', ihale.id).order('created_at', { ascending: false });
+      if (error) return;
+      const container = document.getElementById('bidders');
+      container.innerHTML = '';
+      data.forEach(teklif => {
+        const card = document.createElement('div');
+        card.className = 'bid-card';
+        card.innerHTML = `
+          <h4>${teklif.firma_adi}</h4>
+          <p><strong>Müdür:</strong> ${teklif.mudur}</p>
+          <p><strong>Telefon:</strong> ${teklif.telefon}</p>
+          <p><strong>Teklif:</strong> ₺${teklif.teklif}</p>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    document.getElementById("bidForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      btn.disabled = true;
+
+      const yeniTeklif = {
+        ihale_id: ihale.id,
+        firma_adi: document.getElementById('firma').value,
+        mudur: document.getElementById('mudur').value,
+        telefon: document.getElementById('telefon').value,
+        teklif: parseFloat(document.getElementById('teklif').value)
+      };
+
+      const { error } = await supabase.from('ihale_teklifler').insert([yeniTeklif]);
+      if (!error) yukleTeklifler();
+      btn.disabled = false;
+    });
+
+    baslat();
+  </script>
+</body>
+</html>
